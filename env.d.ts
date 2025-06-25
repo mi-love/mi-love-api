@@ -4,5 +4,6 @@ declare namespace NodeJS {
     BASE_URL: string;
     EXPO_SCHEME: string;
     DATABASE_URL: string;
+    JWT_SECRET: string;
   }
 }

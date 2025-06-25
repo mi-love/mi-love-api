@@ -1,11 +1,12 @@
 require('dotenv').config();
-const { NODE_ENV, BASE_URL, EXPO_SCHEME, DATABASE_URL } = process.env;
+const { NODE_ENV, BASE_URL, EXPO_SCHEME, DATABASE_URL, JWT_SECRET } = process.env;
 
 const KEYS = {
     NODE_ENV,
     BASE_URL,
     EXPO_SCHEME,
-    DATABASE_URL
+    DATABASE_URL,
+    JWT_SECRET
 }
 
 
