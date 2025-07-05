@@ -104,8 +104,6 @@ export class AuthService {
       });
     }
 
-    const hashedPassword = await bcrypt.hash(signupDto.password, 10);
-
     const checkProfilePicture = await this.db.file.findUnique({
       where: {
         id: signupDto.profile_picture,
@@ -117,6 +115,8 @@ export class AuthService {
         message: 'Profile picture not found or failed to upload',
       });
     }
+
+    const hashedPassword = await bcrypt.hash(signupDto.password, 10);
 
     const user = await this.db.user.create({
       data: {
@@ -137,18 +137,16 @@ export class AuthService {
           },
         },
         home_address: signupDto.home_address,
-        interests: {
-          create: signupDto.interests.map((interest) => ({
-            name: interest,
-          })),
-        },
         date_of_birth: new Date(signupDto?.date_of_birth),
       },
     });
 
-    await this.interestUtils.addAndUpdateInterests(signupDto.interests, {
-      userId: user.id,
-    });
+    await this.interestUtils.addAndUpdateInterests(
+      signupDto?.interests?.slice(0, 15),
+      {
+        userId: user.id,
+      },
+    );
 
     return this.login({
       id: user.id,

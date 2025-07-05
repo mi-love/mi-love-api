@@ -21,6 +21,6 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["scripts/**/*", "src/**/*"],
+  "include": ["scripts/**/*", "src/**/*", "*.d.ts"],
   "exclude": ["dist"]
 }

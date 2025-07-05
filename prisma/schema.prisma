@@ -76,7 +76,7 @@ model user {
 
 model interest {
   id         String   @id @default(cuid())
-  name       String
+  name       String @unique
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   user       user[]

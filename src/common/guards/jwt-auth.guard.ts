@@ -33,6 +33,18 @@ export class JwtAuthGuard implements CanActivate {
         where: {
           id: payload?.sub,
         },
+        include: {
+          profile_picture: {
+            select: {
+              url: true,
+              provider: true,
+            },
+          },
+          interests: {
+            take: 15,
+          },
+        },
+
         omit: {
           password: true,
         },

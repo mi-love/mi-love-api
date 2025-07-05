@@ -1,6 +1,7 @@
 import { gender } from '@prisma/client';
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -30,7 +31,10 @@ export class ForgotPasswordDto {
   email: string;
 }
 
-export class SendOtpDto extends ForgotPasswordDto {}
+export class SendOtpDto extends ForgotPasswordDto {
+  @IsBoolean()
+  check_exists: boolean;
+}
 
 export class ResetPasswordDto {
   @IsString()

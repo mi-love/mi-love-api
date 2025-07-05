@@ -43,12 +43,15 @@ export class AuthController {
 
   @Post('send-otp')
   async sendOtp(@Body() body: SendOtpDto) {
-    const exists = await this.authService.checkUserExists(body.email);
-    if (exists) {
-      throw new BadRequestException({
-        message: 'User already exists',
-      });
+    if (body.check_exists == true) {
+      const exists = await this.authService.checkUserExists(body.email);
+      if (!exists) {
+        throw new BadRequestException({
+          message: 'User already exists',
+        });
+      }
     }
+
     return this.authService.sendOtp(body.email);
   }
 
