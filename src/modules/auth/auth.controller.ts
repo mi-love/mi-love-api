@@ -11,7 +11,12 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
 import { GoogleUser } from '@/common/types/o-auth-user';
-import { SignupDto } from './auth.dto';
+import {
+  ForgotPasswordDto,
+  ResetPasswordDto,
+  SignupDto,
+  VerifyOtpDto,
+} from './auth.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -32,6 +37,31 @@ export class AuthController {
   @Post('signup')
   async signup(@Body() signupDto: SignupDto) {
     return this.authService.signup(signupDto);
+  }
+
+  @Post('send-otp')
+  async sendOtp(@Body() body: { email: string }) {
+    return this.authService.sendOtp(body.email);
+  }
+
+  @Post('forgot-password')
+  async forgotPassword(@Body() body: ForgotPasswordDto) {
+    return this.authService.forgotPassword(body.email);
+  }
+
+  @Post('verify-otp')
+  async verifyOtp(@Body() body: VerifyOtpDto) {
+    return this.authService.verifyOtp(body.email, body.otp);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() body: ResetPasswordDto) {
+    return this.authService.resetPassword({
+      password: body.password,
+      token: body.token,
+      otp: body.otp,
+      type: 'reset',
+    });
   }
 
   @Get('google')

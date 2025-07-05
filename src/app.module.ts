@@ -3,6 +3,9 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { DatabaseModule } from './database/database.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { PostsModule } from './modules/posts/posts.module';
+import { JwtGlobalModule } from './common/globals/jwt-global.module';
+import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -11,6 +14,9 @@ import { ProfileModule } from './modules/profile/profile.module';
     }),
     AuthModule,
     ProfileModule,
+    PostsModule,
+    UploadModule,
+    JwtGlobalModule,
     DatabaseModule,
   ],
   controllers: [],

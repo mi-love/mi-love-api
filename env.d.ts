@@ -7,5 +7,7 @@ declare namespace NodeJS {
     JWT_SECRET: string;
     GOOGLE_CLIENT_ID: string;
     GOOGLE_CLIENT_SECRET: string;
+    ONE_TIME_JWT_SECRET: string;
+    PLUNK_API_KEY: string;
   }
 }

@@ -1,5 +1,6 @@
 import { gender } from '@prisma/client';
 import {
+  IsArray,
   IsDateString,
   IsEmail,
   IsEnum,
@@ -17,6 +18,32 @@ export class LoginDto {
   password: string;
 }
 
+export class ForgotPasswordDto {
+  @IsEmail()
+  @IsNotEmpty()
+  email: string;
+}
+
+export class ResetPasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  token: string;
+
+  @IsString()
+  @IsNotEmpty()
+  otp: string;
+
+  @IsString()
+  @IsNotEmpty()
+  password: string;
+}
+
+export class VerifyOtpDto extends ForgotPasswordDto {
+  @IsString()
+  @IsNotEmpty()
+  otp: string;
+}
+
 export class SignupDto extends LoginDto {
   @IsString()
   @IsNotEmpty()
@@ -25,6 +52,30 @@ export class SignupDto extends LoginDto {
   @IsString()
   @IsNotEmpty()
   last_name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  username: string;
+
+  @IsString()
+  @IsNotEmpty()
+  emergency_contact: string;
+
+  @IsString()
+  @IsNotEmpty()
+  bio: string;
+
+  @IsString()
+  @IsNotEmpty()
+  profile_picture: string;
+
+  @IsString()
+  @IsNotEmpty()
+  home_address: string;
+
+  @IsArray()
+  @IsNotEmpty()
+  interests: string[];
 
   @IsString()
   @IsNotEmpty()

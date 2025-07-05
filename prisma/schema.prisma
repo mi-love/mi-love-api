@@ -25,21 +25,148 @@ enum auth_provider {
   apple
 }
 
+enum post_visibility {
+  public
+  friends
+}
+
+enum file_provider {
+  local
+  cloudinary
+}
+
+enum file_type {
+  image
+  video
+  document
+}
+
 model user {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  first_name    String
-  last_name     String
-  password      String?
-  phone_number  String?
-  country       String?
-  gender        gender?
-  date_of_birth DateTime?
+  id                String     @id @default(cuid())
+  email             String     @unique
+  first_name        String
+  last_name         String
+  username          String     @unique
+  password          String?
+  emergency_contact String?
+  bio               String?
+  profile_picture   file?      @relation(fields: [fileId], references: [id])
+  home_address      String?
+  interests         interest[]
+  phone_number      String?
+  country           String?
+  gender            gender?
+  date_of_birth     DateTime?
+
+  comments comment[] @relation("comment_user")
 
   auth_provider auth_provider @default(local)
+
+  created_at     DateTime   @default(now())
+  updated_at     DateTime   @updatedAt
+  posts          post[]     @relation("post_user")
+  likes          post[]     @relation("post_likes")
+  status         status[]
+  reaction       reaction[]
+  liked_comments comment[]  @relation("liked_comments")
+  fileId         String?
+
+  @@map("users")
+}
+
+model interest {
+  id         String   @id @default(cuid())
+  name       String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       user[]
+
+  @@map("interests")
+}
+
+model otp {
+  id         String   @id @default(cuid())
+  email      String
+  otp        String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("otps")
+}
+
+model post {
+  id         String  @id @default(cuid())
+  embeddings String? @db.LongText
+  content    String  @db.LongText
+
+  visibility post_visibility @default(public)
+  files      file[]
+  likes      user[]          @relation("post_likes")
+  created_at DateTime        @default(now())
+  comments   comment[]
+  updated_at DateTime        @updatedAt
+  userId     String
+  user       user            @relation("post_user", fields: [userId], references: [id])
+
+  @@map("posts")
+}
+
+model comment {
+  id      String  @id @default(cuid())
+  content String
+  likes   user[]  @relation("liked_comments")
+  user    user?   @relation("comment_user", fields: [userId], references: [id])
+  userId  String?
+
+  post   post?   @relation(fields: [postId], references: [id])
+  postId String?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
-  @@map("users")
+  @@map("comments")
+}
+
+model file {
+  id         String        @id @default(cuid())
+  url        String
+  provider   file_provider @default(local)
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+  type       file_type
+
+  ref    String?
+  post   post?    @relation(fields: [postId], references: [id])
+  postId String?
+  status status[]
+  user   user[]
+
+  @@map("files")
+}
+
+model status {
+  id         String     @id @default(cuid())
+  content    String
+  reactions  reaction[]
+  image      file       @relation(fields: [fileId], references: [id])
+  created_at DateTime   @default(now())
+  updated_at DateTime   @updatedAt
+  user       user?      @relation(fields: [userId], references: [id])
+  userId     String?
+  fileId     String
+
+  @@map("statuses")
+}
+
+model reaction {
+  id         String   @id @default(cuid())
+  emoji      String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  userId     String
+  user       user     @relation(fields: [userId], references: [id])
+  status     status?  @relation(fields: [statusId], references: [id])
+  statusId   String?
+
+  @@map("reactions")
 }

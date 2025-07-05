@@ -1,22 +1,24 @@
 import { Module } from '@nestjs/common';
 import { PassportModule } from '@nestjs/passport';
-import { JwtModule } from '@nestjs/jwt';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { GoogleStrategy } from './strategies/google.strategy';
-import { AppleStrategy } from './strategies/apple.strategy';
-import { JwtStrategy } from './strategies/jwt.strategy';
+import { GoogleStrategy } from '../../common/strategies/google.strategy';
+import { AppleStrategy } from '../../common/strategies/apple.strategy';
+import { JwtStrategy } from '../../common/strategies/jwt.strategy';
+import { InterestService } from '@/common/services/interest.service';
+import { MailService } from '@/common/services/mail.service';
 
 @Module({
-  imports: [
-    PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_SECRET,
-      //   signOptions: { expiresIn: '7d' },
-    }),
-  ],
+  imports: [PassportModule],
   controllers: [AuthController],
-  providers: [AuthService, GoogleStrategy, AppleStrategy, JwtStrategy],
+  providers: [
+    AuthService,
+    GoogleStrategy,
+    AppleStrategy,
+    JwtStrategy,
+    InterestService,
+    MailService,
+  ],
   exports: [AuthService],
 })
 export class AuthModule {}
