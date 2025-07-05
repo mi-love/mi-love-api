@@ -64,7 +64,32 @@ export class AuthService {
     return !!user;
   }
 
+  async verifyOneTimeToken(token: string) {
+    try {
+      const decoded = await this.jwtService.verifyAsync(token, {
+        secret: process.env.ONE_TIME_JWT_SECRET,
+      });
+      return decoded;
+    } catch {
+      return false;
+    }
+  }
+
   async signup(signupDto: SignupDto) {
+    const decoded = await this.verifyOneTimeToken(signupDto.token);
+
+    if (!decoded) {
+      throw new BadRequestException({
+        message: 'Invalid token',
+      });
+    }
+
+    if (decoded.email !== signupDto.email) {
+      throw new BadRequestException({
+        message: 'Invalid token',
+      });
+    }
+
     const existingUser = await this.checkUserExists(signupDto.email);
     if (existingUser) {
       throw new BadRequestException({
@@ -183,6 +208,7 @@ export class AuthService {
   generateOtp() {
     const fallback = Math.floor(100000 + Math.random() * 900000);
     const otp = otpGenerator.generate(6, {
+      lowerCaseAlphabets: false,
       upperCaseAlphabets: false,
       specialChars: false,
       digits: true,
@@ -208,7 +234,14 @@ export class AuthService {
     await this.mailService.sendEmail({
       to: email.toString(),
       subject: subject || 'Verify your account',
-      body: otp.toString(),
+      body: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #333;">Verify your account</h2>
+        <p style="font-size: 16px; color: #666;">Your verification code is:</p>
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 24px; font-weight: bold; text-align: center; color: #28a745;">
+          ${otp}
+        </div>
+      </div>`,
     });
     console.log('[OTP]', otp);
     return {
@@ -241,11 +274,8 @@ export class AuthService {
     password: string;
     token: string;
     otp: string;
-    type: 'reset' | 'verify';
   }) {
-    const decoded = await this.jwtService.verifyAsync(token, {
-      secret: process.env.ONE_TIME_JWT_SECRET,
-    });
+    const decoded = await this.verifyOneTimeToken(token);
 
     const email = decoded?.email as string;
     if (!email) {

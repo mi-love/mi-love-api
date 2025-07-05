@@ -30,8 +30,8 @@ export class UploadService {
         select: {
           id: true,
           provider: true,
-          type: true,
-          url: true,
+          // type: true,
+          // url: true,
         },
       });
     });

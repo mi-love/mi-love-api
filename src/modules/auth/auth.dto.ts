@@ -4,9 +4,15 @@ import {
   IsDateString,
   IsEmail,
   IsEnum,
+  IsJWT,
   IsNotEmpty,
   IsString,
 } from 'class-validator';
+
+enum otp_type {
+  reset = 'reset',
+  verify = 'verify',
+}
 
 export class LoginDto {
   @IsEmail()
@@ -23,6 +29,8 @@ export class ForgotPasswordDto {
   @IsNotEmpty()
   email: string;
 }
+
+export class SendOtpDto extends ForgotPasswordDto {}
 
 export class ResetPasswordDto {
   @IsString()
@@ -42,12 +50,24 @@ export class VerifyOtpDto extends ForgotPasswordDto {
   @IsString()
   @IsNotEmpty()
   otp: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsEnum(otp_type)
+  type: otp_type;
 }
 
 export class SignupDto extends LoginDto {
   @IsString()
   @IsNotEmpty()
   first_name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsJWT({
+    message: 'Invalid token',
+  })
+  token: string;
 
   @IsString()
   @IsNotEmpty()

@@ -2,12 +2,12 @@ import {
   Controller,
   Post,
   UploadedFiles,
-  UseGuards,
+  // UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
+// import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 
 interface MulterFile {
   fieldname: string;
@@ -22,11 +22,11 @@ interface MulterFile {
 }
 
 @Controller('upload')
-@UseGuards(JwtAuthGuard)
+// @UseGuards(JwtAuthGuard)
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
-  @Post('/')
+  @Post()
   @UseInterceptors(FilesInterceptor('files'))
   uploadImage(@UploadedFiles() files: Array<MulterFile>) {
     if (!files)
@@ -34,7 +34,6 @@ export class UploadController {
         message: 'No files to upload',
         data: [],
       };
-
     return this.uploadService.uploadLocal(files);
   }
 }

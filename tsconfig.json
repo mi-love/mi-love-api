@@ -21,6 +21,6 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["scripts/**/*"],
+  "include": ["scripts/**/*", "src/**/*"],
   "exclude": ["dist"]
 }

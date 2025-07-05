@@ -6,6 +6,7 @@ import {
   UseGuards,
   Req,
   Res,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
@@ -14,6 +15,7 @@ import { GoogleUser } from '@/common/types/o-auth-user';
 import {
   ForgotPasswordDto,
   ResetPasswordDto,
+  SendOtpDto,
   SignupDto,
   VerifyOtpDto,
 } from './auth.dto';
@@ -40,7 +42,13 @@ export class AuthController {
   }
 
   @Post('send-otp')
-  async sendOtp(@Body() body: { email: string }) {
+  async sendOtp(@Body() body: SendOtpDto) {
+    const exists = await this.authService.checkUserExists(body.email);
+    if (exists) {
+      throw new BadRequestException({
+        message: 'User already exists',
+      });
+    }
     return this.authService.sendOtp(body.email);
   }
 
@@ -51,7 +59,7 @@ export class AuthController {
 
   @Post('verify-otp')
   async verifyOtp(@Body() body: VerifyOtpDto) {
-    return this.authService.verifyOtp(body.email, body.otp);
+    return this.authService.verifyOtp(body.email, body.otp, body.type);
   }
 
   @Post('reset-password')
@@ -60,7 +68,6 @@ export class AuthController {
       password: body.password,
       token: body.token,
       otp: body.otp,
-      type: 'reset',
     });
   }
 
