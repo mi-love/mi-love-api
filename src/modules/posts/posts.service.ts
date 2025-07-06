@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { DbService } from '@/database/database.service';
-import { createPostDto, getPostsDto } from './posts.dto';
+import { createPostDto, getPostsDto, updatePostDto } from './posts.dto';
 import { Prisma } from '@prisma/client';
 import { UserWithoutPassword } from '@/common/types/db';
 import {
@@ -15,20 +15,67 @@ export class PostsService {
     private paginationUtils: PaginationUtils,
   ) {}
 
+  async updatePost({
+    body,
+    userId,
+    postId,
+  }: {
+    body: updatePostDto;
+    userId: string;
+    postId: string;
+  }) {
+    const checkUser = await this.db.post.findUnique({
+      where: {
+        id: postId,
+        userId,
+      },
+    });
+
+    if (!checkUser) {
+      throw new NotFoundException({
+        message: 'Post not found',
+      });
+    }
+
+    await this.db.post.update({
+      where: {
+        id: postId,
+        userId,
+      },
+      data: {
+        content: body?.content,
+        visibility: body?.visibility,
+      },
+    });
+
+    return {
+      message: 'Post updated successfully',
+    };
+  }
+
   async getAllPosts({
     query,
+    user,
   }: {
     query: getPostsDto;
-    user?: UserWithoutPassword;
+    user: UserWithoutPassword;
   }) {
     const { filterValue, filterBy, ...queryParams } = query;
-    console.log('filterBy', filterBy);
     const { skip, limit } = this.paginationUtils.getPagination(queryParams);
 
     const where: Prisma.postWhereInput = {
       content: {
         contains: filterValue,
       },
+      likes:
+        filterBy == 'liked'
+          ? {
+              some: {
+                id: user.id,
+              },
+            }
+          : {},
+      userId: filterBy == 'my' ? user.id : {},
     };
 
     const allPosts = await this.db.post.count({
@@ -39,6 +86,35 @@ export class PostsService {
       where,
       skip,
       take: Number(limit),
+      include: {
+        user: {
+          select: {
+            first_name: true,
+            id: true,
+            email: true,
+            last_name: true,
+            username: true,
+            profile_picture: {
+              select: {
+                url: true,
+                provider: true,
+              },
+            },
+          },
+        },
+        _count: {
+          select: {
+            files: true,
+            likes: true,
+          },
+        },
+      },
+      omit: {
+        embeddings: true,
+      },
+      orderBy: {
+        created_at: query.order == 'desc' ? 'desc' : 'asc',
+      },
     });
     return {
       posts,
@@ -76,6 +152,9 @@ export class PostsService {
           },
         },
       },
+      omit: {
+        embeddings: true,
+      },
     });
 
     if (!post) {
@@ -89,20 +168,25 @@ export class PostsService {
     };
   }
 
-  async deletePost(id: string) {
+  async deletePost(id: string, userId: string) {
     const post = await this.db.post.findUnique({
-      where: { id },
+      where: {
+        id,
+        userId,
+      },
     });
     if (!post) {
       throw new NotFoundException({
         message: 'Post not found',
       });
     }
-    const post_ = await this.db.post.delete({
-      where: { id },
+    await this.db.post.delete({
+      where: { id, userId },
     });
 
-    return post_;
+    return {
+      message: 'Post deleted',
+    };
   }
 
   async createPost({
@@ -124,8 +208,8 @@ export class PostsService {
           connect: post.files.map((file) => ({ id: file })),
         },
       },
-      include: {
-        files: true,
+      select: {
+        id: true,
       },
     });
 
@@ -161,6 +245,17 @@ export class PostsService {
   }
 
   async unlikePost({ postId, userId }: { postId: string; userId: string }) {
+    const post = await this.db.post.findUnique({
+      where: {
+        id: postId,
+      },
+    });
+
+    if (!post) {
+      throw new NotFoundException({
+        message: 'Post not found',
+      });
+    }
     await this.db.post.update({
       where: { id: postId },
       data: {
@@ -191,10 +286,28 @@ export class PostsService {
       },
     });
 
+    if (!allLikes) {
+      throw new NotFoundException({
+        message: 'Post not found',
+      });
+    }
+
     const likes = await this.db.post.findUnique({
       where: { id: postId },
       include: {
         likes: {
+          select: {
+            id: true,
+            username: true,
+            last_name: true,
+            bio: true,
+            profile_picture: {
+              select: {
+                url: true,
+                provider: true,
+              },
+            },
+          },
           skip,
           take: limit,
         },

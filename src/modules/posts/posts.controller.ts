@@ -5,13 +5,14 @@ import {
   Get,
   Param,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
-import { createPostDto, getPostsDto } from './posts.dto';
+import { createPostDto, getPostsDto, updatePostDto } from './posts.dto';
 import { Request } from 'express';
 import { PaginationParams } from '@/common/services/pagination.service';
 
@@ -25,14 +26,27 @@ export class PostsController {
     return await this.postsService.getAllPosts({ query, user: req.user });
   }
 
+  @Put('/:id')
+  async updatePost(
+    @Body() body: updatePostDto,
+    @Param('id') param: string,
+    @Req() req: Request,
+  ) {
+    return await this.postsService.updatePost({
+      userId: req.user.id,
+      body,
+      postId: param,
+    });
+  }
+
   @Get('/:id')
   async getPostById(@Param('id') id: string) {
     return await this.postsService.getPostById(id);
   }
 
   @Delete('/:id')
-  async deletePost(@Param('id') id: string) {
-    return this.postsService.deletePost(id);
+  async deletePost(@Param('id') id: string, @Req() req: Request) {
+    return this.postsService.deletePost(id, req.user.id);
   }
 
   @Post('/')

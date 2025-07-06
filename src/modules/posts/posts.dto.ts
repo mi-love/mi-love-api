@@ -27,6 +27,16 @@ export class getPostsDto {
 
   limit: number;
   page: number;
+
+  order: 'desc' | 'asc';
+}
+
+export class updatePostDto {
+  @IsEnum(post_visibility)
+  @IsOptional()
+  visibility: post_visibility;
+
+  content: string;
 }
 
 export class createCommentDto {
