@@ -6,6 +6,7 @@ import { ProfileModule } from './modules/profile/profile.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { JwtGlobalModule } from './common/globals/jwt-global.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { StatusModule } from './modules/status/status.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { UploadModule } from './modules/upload/upload.module';
     ProfileModule,
     PostsModule,
     UploadModule,
+    StatusModule,
     JwtGlobalModule,
     DatabaseModule,
   ],
