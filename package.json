@@ -12,6 +12,7 @@
     "env": "node ./scripts/env.js",
     "prestart": "yarn run env",
     "predev": "yarn run env",
+    "start:app": "yarn db:push && yarn start",
     "start:dev": "nest start",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",

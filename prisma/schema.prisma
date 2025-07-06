@@ -9,7 +9,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -96,8 +96,8 @@ model otp {
 
 model post {
   id         String  @id @default(cuid())
-  embeddings String? @db.LongText
-  content    String  @db.LongText
+  embeddings String? @db.Text
+  content    String  @db.Text
 
   visibility post_visibility @default(public)
   files      file[]

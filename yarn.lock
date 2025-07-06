@@ -1553,7 +1553,7 @@
 
 "@types/multer@^2.0.0":
   version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@types/multer/-/multer-2.0.0.tgz#db5f82136b619f5ce4d923b00034eb466c13acf4"
+  resolved "https://registry.npmjs.org/@types/multer/-/multer-2.0.0.tgz"
   integrity sha512-C3Z9v9Evij2yST3RSBktxP9STm6OdMc5uR1xF1SGr98uv8dUlAL2hqwrZ3GVB3uyMyiegnscEK6PGtYvNrjTjw==
   dependencies:
     "@types/express" "*"
@@ -1574,7 +1574,7 @@
 
 "@types/otp-generator@^4.0.2":
   version "4.0.2"
-  resolved "https://registry.yarnpkg.com/@types/otp-generator/-/otp-generator-4.0.2.tgz#b1efdb53cfba356f13465d10fa513d1b7ae42b85"
+  resolved "https://registry.npmjs.org/@types/otp-generator/-/otp-generator-4.0.2.tgz"
   integrity sha512-9+qqWzuFb332hXPbLgjUyOXlbcaTQkmkmqQjTduvNuOmPV5fW+iLv70JsVEhdUy0DWi4kY34++HDCaWl6N0AYg==
 
 "@types/passport-google-oauth20@^2.0.16":
@@ -4815,7 +4815,7 @@ os-tmpdir@~1.0.2:
 
 otp-generator@^4.0.1:
   version "4.0.1"
-  resolved "https://registry.yarnpkg.com/otp-generator/-/otp-generator-4.0.1.tgz#ec6bb8d0d14c171318e8eb731fdfcd2dd1ad83e7"
+  resolved "https://registry.npmjs.org/otp-generator/-/otp-generator-4.0.1.tgz"
   integrity sha512-2TJ52vUftA0+J3eque4wwVtpaL4/NdIXDL0gFWFJFVUAZwAN7+9tltMhL7GCNYaHJtuONoier8Hayyj4HLbSag==
 
 p-cancelable@^3.0.0:

@@ -1,0 +1,25 @@
+services:
+  app:
+    container_name: milove
+    build: .
+    ports:
+      - '9999:9999'
+    env_file:
+      - .env.local
+    depends_on:
+      - db
+
+  db:
+    container_name: milove-db
+    image: ankane/pgvector
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mi-love-api
+    volumes:
+      - milove-db-data:/var/lib/postgresql/data
+
+volumes:
+  milove-db-data:
