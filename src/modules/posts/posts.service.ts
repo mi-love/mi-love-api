@@ -102,6 +102,16 @@ export class PostsService {
             },
           },
         },
+        files: {
+          select: {
+            url: true,
+            provider: true,
+          },
+          take: 5,
+          orderBy: {
+            created_at: 'desc',
+          },
+        },
         _count: {
           select: {
             files: true,
