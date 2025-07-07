@@ -41,6 +41,19 @@ enum file_type {
   document
 }
 
+model blocked_users {
+  id String @id @default(cuid())
+
+  user         user?    @relation("user", fields: [userId], references: [id])
+  blocked_user user?    @relation("blocked_user", fields: [blockedUserId], references: [id])
+  reason       String?
+
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  userId        String?
+  blockedUserId String?
+}
+
 model user {
   id                String     @id @default(cuid())
   email             String     @unique
@@ -62,21 +75,26 @@ model user {
 
   auth_provider auth_provider @default(local)
 
-  created_at     DateTime   @default(now())
-  updated_at     DateTime   @updatedAt
-  posts          post[]     @relation("post_user")
-  likes          post[]     @relation("post_likes")
+  my_friends user[] @relation("friends")
+  friends    user[] @relation("friends")
+
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
+  posts          post[]          @relation("post_user")
+  likes          post[]          @relation("post_likes")
   status         status[]
   reaction       reaction[]
-  liked_comments comment[]  @relation("liked_comments")
+  liked_comments comment[]       @relation("liked_comments")
   fileId         String?
+  blocked        blocked_users[] @relation("user")
+  blocked_users  blocked_users[] @relation("blocked_user")
 
   @@map("users")
 }
 
 model interest {
   id         String   @id @default(cuid())
-  name       String @unique
+  name       String   @unique
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   user       user[]
@@ -103,12 +121,24 @@ model post {
   files      file[]
   likes      user[]          @relation("post_likes")
   created_at DateTime        @default(now())
-  comments   comment[]
   updated_at DateTime        @updatedAt
+  comments   comment[]
   userId     String
   user       user            @relation("post_user", fields: [userId], references: [id])
 
   @@map("posts")
+}
+
+model status {
+  id       String     @id @default(cuid())
+  user     user       @relation(fields: [userId], references: [id])
+  content  String?    @db.VarChar()
+  file     file[]
+  reaction reaction[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  userId     String
 }
 
 model comment {
@@ -142,20 +172,6 @@ model file {
   user   user[]
 
   @@map("files")
-}
-
-model status {
-  id         String     @id @default(cuid())
-  content    String
-  reactions  reaction[]
-  image      file       @relation(fields: [fileId], references: [id])
-  created_at DateTime   @default(now())
-  updated_at DateTime   @updatedAt
-  user       user?      @relation(fields: [userId], references: [id])
-  userId     String?
-  fileId     String
-
-  @@map("statuses")
 }
 
 model reaction {
