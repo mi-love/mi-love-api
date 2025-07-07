@@ -8,11 +8,17 @@ import { JwtGlobalModule } from './common/globals/jwt-global.module';
 import { UploadModule } from './modules/upload/upload.module';
 import { StatusModule } from './modules/status/status.module';
 import { FriendsModule } from './modules/friends/friends.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    ServeStaticModule.forRoot({
+      serveRoot: '/uploads',
+      rootPath: join(__dirname, '..', 'uploads'),
     }),
     DatabaseModule,
     AuthModule,
