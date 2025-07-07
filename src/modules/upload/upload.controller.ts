@@ -27,7 +27,7 @@ export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post()
-  @UseInterceptors(FilesInterceptor('files'))
+  @UseInterceptors(FilesInterceptor('files', 5))
   uploadImage(@UploadedFiles() files: Array<MulterFile>) {
     if (!files)
       return {
