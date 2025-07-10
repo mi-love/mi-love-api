@@ -1,6 +1,6 @@
 import { UserWithoutPassword } from './db';
 
-declare module 'express' {
+module 'express' {
   export interface Request {
     user: UserWithoutPassword;
   }
