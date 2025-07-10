@@ -1,8 +1,6 @@
 services:
   app:
     container_name: milove
-    volumes:
-      - .:/api-server
     build: .
     ports:
       - '9999:9999'

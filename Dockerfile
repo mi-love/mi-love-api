@@ -1,15 +1,13 @@
-# FROM node:20-alpine
 FROM node:20-slim
-# FROM --platform=linux/arm64 node:20-slim
-# Chnage the above line to 
-
 WORKDIR /api-server
 
-COPY . .
+# Set correct environment for native binaries (e.g., onnxruntime-node)
 ENV npm_config_arch=x64
 ENV npm_config_platform=linux
-RUN yarn install
-RUN yarn build
+COPY package.json yarn.lock ./
 
+RUN yarn install
+COPY . .
+RUN yarn build
 EXPOSE 9999
 CMD ["yarn", "start:app"]
