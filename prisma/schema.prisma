@@ -44,8 +44,8 @@ enum file_type {
 model blocked_users {
   id String @id @default(cuid())
 
-  user         user?    @relation("user", fields: [userId], references: [id])
-  blocked_user user?    @relation("blocked_user", fields: [blockedUserId], references: [id])
+  user         user?   @relation("user", fields: [userId], references: [id])
+  blocked_user user?   @relation("blocked_user", fields: [blockedUserId], references: [id])
   reason       String?
 
   created_at    DateTime @default(now())
@@ -93,10 +93,11 @@ model user {
 }
 
 model interest {
-  id         String   @id @default(cuid())
-  name       String   @unique
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  id         String                 @id @default(cuid())
+  name       String                 @unique
+  embeddings Unsupported("vector")?
+  created_at DateTime               @default(now())
+  updated_at DateTime               @updatedAt
   user       user[]
 
   @@map("interests")
@@ -113,9 +114,9 @@ model otp {
 }
 
 model post {
-  id         String  @id @default(cuid())
-  embeddings String? @db.Text
-  content    String  @db.Text
+  id         String                 @id @default(cuid())
+  embeddings Unsupported("vector")?
+  content    String                 @db.Text
 
   visibility post_visibility @default(public)
   files      file[]

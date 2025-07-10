@@ -6,5 +6,6 @@ COPY . .
 RUN yarn install
 RUN yarn build
 
+EXPOSE 5555
 EXPOSE 9999
 CMD ["yarn", "start:app"]

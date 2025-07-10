@@ -7,6 +7,7 @@ import { AppleStrategy } from '../../common/strategies/apple.strategy';
 import { JwtStrategy } from '../../common/strategies/jwt.strategy';
 import { InterestService } from '@/common/services/interest.service';
 import { MailService } from '@/common/services/mail.service';
+import { EmbeddingsService } from '@/transformers/embeddings.service';
 
 @Module({
   imports: [PassportModule],
@@ -18,6 +19,7 @@ import { MailService } from '@/common/services/mail.service';
     JwtStrategy,
     InterestService,
     MailService,
+    EmbeddingsService,
   ],
   exports: [AuthService],
 })

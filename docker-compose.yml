@@ -1,9 +1,12 @@
 services:
   app:
     container_name: milove
+    volumes:
+      - .:/api-server
     build: .
     ports:
       - '9999:9999'
+      - '5555:5555'
     env_file:
       - .env.local
     depends_on:
@@ -19,7 +22,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: mi-love-api
     volumes:
-      - milove-db-data:/var/lib/postgresql/data
+      - db-data:/var/lib/postgresql/data
 
 volumes:
-  milove-db-data:
+  db-data:
