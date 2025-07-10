@@ -6,7 +6,6 @@ services:
     build: .
     ports:
       - '9999:9999'
-      - '5555:5555'
     env_file:
       - .env.local
     depends_on:
