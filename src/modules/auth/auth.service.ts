@@ -229,10 +229,11 @@ export class AuthService {
         otp: await bcrypt.hash(otp, 10),
       },
     });
-    await this.mailService.sendEmail({
-      to: email.toString(),
-      subject: subject || 'Verify your account',
-      body: `
+    this.mailService
+      .sendEmail({
+        to: email.toString(),
+        subject: subject || 'Verify your account',
+        body: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #333;">Verify your account</h2>
         <p style="font-size: 16px; color: #666;">Your verification code is:</p>
@@ -240,7 +241,8 @@ export class AuthService {
           ${otp}
         </div>
       </div>`,
-    });
+      })
+      .catch(() => null);
     console.log('[OTP]', otp);
     return {
       message: 'OTP sent to your email',

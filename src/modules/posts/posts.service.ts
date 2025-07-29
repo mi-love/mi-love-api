@@ -119,9 +119,9 @@ export class PostsService {
           },
         },
       },
-      omit: {
-        embeddings: true,
-      },
+      // omit: {
+      //   embeddings: true,
+      // },
       orderBy: {
         created_at: query.order == 'desc' ? 'desc' : 'asc',
       },
@@ -162,9 +162,9 @@ export class PostsService {
           },
         },
       },
-      omit: {
-        embeddings: true,
-      },
+      // omit: {
+      //   embeddings: true,
+      // },
     });
 
     if (!post) {

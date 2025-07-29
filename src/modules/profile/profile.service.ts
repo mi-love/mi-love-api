@@ -24,6 +24,34 @@ export class ProfileService {
     };
   }
 
+  async getProfileById(id: string, user?: UserWithoutPassword) {
+    const profile = await this.db.user.findUnique({
+      where: {
+        id,
+        blocked: {
+          none: {
+            userId: user?.id,
+          },
+        },
+      },
+      omit: {
+        password: true,
+        auth_provider: true,
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException({
+        message: 'Profile not found',
+      });
+    }
+
+    return {
+      message: 'Profile fetched successfully',
+      data: profile,
+    };
+  }
+
   async editProfile(userId: string, editProfileDto: EditProfileDto) {
     const user = await this.db.user.findUnique({
       where: {
