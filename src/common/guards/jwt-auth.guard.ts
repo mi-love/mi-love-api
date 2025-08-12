@@ -34,6 +34,12 @@ export class JwtAuthGuard implements CanActivate {
           id: payload?.sub,
         },
         include: {
+          _count: {
+            select: {
+              friends: true,
+              my_friends: true,
+            },
+          },
           profile_picture: {
             select: {
               url: true,
