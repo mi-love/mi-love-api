@@ -9,5 +9,8 @@ declare namespace NodeJS {
     GOOGLE_CLIENT_SECRET: string;
     ONE_TIME_JWT_SECRET: string;
     PLUNK_API_KEY: string;
+    FLU_PUBLIC_KEY: string;
+    FLU_SECRET_KEY: string;
+    FLU_ENCRYPTION_KEY: string;
   }
 }
