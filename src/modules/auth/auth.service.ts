@@ -136,6 +136,11 @@ export class AuthService {
             id: checkProfilePicture.id,
           },
         },
+        wallet: {
+          create: {
+            balance: 0,
+          },
+        },
         home_address: signupDto.home_address,
         date_of_birth: new Date(signupDto?.date_of_birth),
       },
@@ -384,6 +389,11 @@ export class AuthService {
           email: profile.email,
           first_name: profile.firstName,
           last_name: profile.lastName,
+          wallet: {
+            create: {
+              balance: 0,
+            },
+          },
           username: `${profile.firstName.toLowerCase()}_${profile.lastName.toLowerCase()}_${Date.now()}`,
           auth_provider: 'google',
         },
@@ -408,6 +418,11 @@ export class AuthService {
           email: profile.email,
           first_name: profile.name?.firstName || '',
           last_name: profile.name?.lastName || '',
+          wallet: {
+            create: {
+              balance: 0,
+            },
+          },
           username: `${(profile.name?.firstName || 'user').toLowerCase()}_${(profile.name?.lastName || 'apple').toLowerCase()}_${Date.now()}`,
           auth_provider: 'apple',
         },

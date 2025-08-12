@@ -88,6 +88,8 @@ model user {
   fileId         String?
   blocked        blocked_users[] @relation("user")
   blocked_users  blocked_users[] @relation("blocked_user")
+  wallet         wallet          @relation(fields: [walletId], references: [id])
+  walletId       String
 
   @@map("users")
 }
@@ -95,7 +97,7 @@ model user {
 model interest {
   id         String                 @id @default(cuid())
   name       String                 @unique
-  embeddings Unsupported("vector")?
+  // embeddings Unsupported("vector")?
   created_at DateTime               @default(now())
   updated_at DateTime               @updatedAt
   user       user[]
@@ -115,7 +117,7 @@ model otp {
 
 model post {
   id         String                 @id @default(cuid())
-  embeddings Unsupported("vector")?
+  // embeddings Unsupported("vector")?
   content    String                 @db.Text
 
   visibility post_visibility @default(public)
@@ -186,4 +188,14 @@ model reaction {
   statusId   String?
 
   @@map("reactions")
+}
+
+model wallet {
+  id         String   @id @default(cuid())
+  balance    Float    @default(0)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  user       user[]
+
+  @@map("wallets")
 }

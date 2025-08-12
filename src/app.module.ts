@@ -10,6 +10,7 @@ import { StatusModule } from './modules/status/status.module';
 import { FriendsModule } from './modules/friends/friends.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { WalletModule } from './modules/wallet/wallet.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { join } from 'path';
     StatusModule,
     JwtGlobalModule,
     FriendsModule,
+    WalletModule,
   ],
   controllers: [],
   providers: [],
