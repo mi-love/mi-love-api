@@ -2,7 +2,7 @@ import { DbService } from '@/database/database.service';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { createStatusDto, getStatusDto } from './status.dto';
 import { PaginationUtils } from '@/common/services/pagination.service';
-import { Prisma } from '@prisma/client';
+import { file, Prisma } from '@prisma/client';
 
 @Injectable()
 export class StatusService {
@@ -18,26 +18,32 @@ export class StatusService {
       });
     }
 
-    const checkFile = await this.db.file.findUnique({
-      where: {
-        id: body.fileId,
-      },
-    });
+    let checkFile: file | null = null;
 
-    if (!checkFile) {
-      new BadRequestException({
-        message: 'Invalid file included or file not uploaded correctly',
+    if (body?.fileId) {
+      checkFile = await this.db.file.findUnique({
+        where: {
+          id: body.fileId,
+        },
       });
+
+      if (!checkFile) {
+        new BadRequestException({
+          message: 'Invalid file included or file not uploaded correctly',
+        });
+      }
     }
 
     const status = await this.db.status.create({
       data: {
         content: body?.content,
-        file: {
-          connect: {
-            id: body.fileId,
-          },
-        },
+        file: checkFile
+          ? {
+              connect: {
+                id: body.fileId,
+              },
+            }
+          : undefined,
         user: {
           connect: {
             id: userId,
@@ -120,6 +126,27 @@ export class StatusService {
 
     return {
       data: groupedStatuses,
+      meta: this.pagination.getMeta({
+        limit,
+        page: query?.page || 1,
+        totalItems: statuses.length,
+      }),
+    };
+  }
+
+  async getMyStatuses(userId: string, query: getStatusDto) {
+    const { limit, skip } = this.pagination.getPagination(query);
+
+    const statuses = await this.db.status.findMany({
+      where: {
+        userId,
+      },
+      skip,
+      take: limit,
+    });
+
+    return {
+      data: statuses,
       meta: this.pagination.getMeta({
         limit,
         page: query?.page || 1,

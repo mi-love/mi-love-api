@@ -32,7 +32,7 @@ export class EditProfileDto {
 
   @IsString()
   @IsOptional()
-  profile_picture: string;
+  profile_picture_id: string;
 
   @IsString()
   @IsOptional()

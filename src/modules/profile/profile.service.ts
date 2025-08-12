@@ -65,10 +65,13 @@ export class ProfileService {
       });
     }
 
-    if (editProfileDto?.profile_picture) {
+    if (
+      editProfileDto?.profile_picture_id &&
+      editProfileDto?.profile_picture_id !== user.fileId
+    ) {
       const checkProfilePicture = await this.db.file.findUnique({
         where: {
-          id: editProfileDto.profile_picture,
+          id: editProfileDto.profile_picture_id,
         },
       });
 
@@ -88,22 +91,25 @@ export class ProfileService {
       });
     }
 
+    const safeEdit = (d: string) => {
+      return d?.trim() || undefined;
+    };
     await this.db.user.update({
       where: {
         id: userId,
       },
       data: {
-        first_name: editProfileDto?.first_name,
-        last_name: editProfileDto?.last_name,
-        username: editProfileDto?.username,
-        phone_number: editProfileDto?.phone_number,
-        country: editProfileDto?.country,
+        first_name: safeEdit(editProfileDto?.first_name),
+        last_name: safeEdit(editProfileDto?.last_name),
+        username: safeEdit(editProfileDto?.username),
+        phone_number: safeEdit(editProfileDto?.phone_number),
+        country: safeEdit(editProfileDto?.country),
         gender: editProfileDto?.gender,
         bio: editProfileDto?.bio,
-        profile_picture: editProfileDto?.profile_picture
+        profile_picture: editProfileDto?.profile_picture_id
           ? {
               connect: {
-                id: editProfileDto.profile_picture,
+                id: editProfileDto.profile_picture_id,
               },
             }
           : undefined,
