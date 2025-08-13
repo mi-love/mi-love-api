@@ -41,6 +41,21 @@ enum file_type {
   document
 }
 
+enum transaction_type {
+  credit
+  debit
+}
+
+enum status_type {
+  success
+  failed
+  pending
+}
+
+enum currency {
+  USD
+}
+
 model blocked_users {
   id String @id @default(cuid())
 
@@ -90,16 +105,17 @@ model user {
   blocked_users  blocked_users[] @relation("blocked_user")
   wallet         wallet          @relation(fields: [walletId], references: [id])
   walletId       String
+  transaction    transaction[]
 
   @@map("users")
 }
 
 model interest {
-  id         String                 @id @default(cuid())
-  name       String                 @unique
+  id         String   @id @default(cuid())
+  name       String   @unique
   // embeddings Unsupported("vector")?
-  created_at DateTime               @default(now())
-  updated_at DateTime               @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
   user       user[]
 
   @@map("interests")
@@ -116,9 +132,9 @@ model otp {
 }
 
 model post {
-  id         String                 @id @default(cuid())
+  id      String @id @default(cuid())
   // embeddings Unsupported("vector")?
-  content    String                 @db.Text
+  content String @db.Text
 
   visibility post_visibility @default(public)
   files      file[]
@@ -173,6 +189,7 @@ model file {
   postId String?
   status status[]
   user   user[]
+  gift   gift[]
 
   @@map("files")
 }
@@ -198,4 +215,51 @@ model wallet {
   user       user[]
 
   @@map("wallets")
+}
+
+model transaction {
+  id           String           @id @default(cuid())
+  amount       Float
+  fee          Float?           @default(0)
+  type         transaction_type
+  description  String?
+  status       status_type      @default(pending)
+  currency     currency
+  payment_link String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  userId     String
+  user       user     @relation(fields: [userId], references: [id])
+
+  @@map("transactions")
+}
+
+model gift_category {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String? @db.Text
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  gift       gift[]
+
+  @@map("gift_category")
+}
+
+model gift {
+  id          String        @id @default(cuid())
+  points      Float
+  category    gift_category @relation(fields: [gift_category_id], references: [id])
+  name        String?
+  description String?       @db.Text
+
+  image   file?   @relation(fields: [imageId], references: [id])
+  imageId String?
+
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  gift_category_id String
+
+  @@map("gifts")
 }

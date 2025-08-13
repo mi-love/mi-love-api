@@ -1,0 +1,856 @@
+[{
+  "_id": 1,
+  "name": "Virtual Flowers",
+  "category": "General Gifts",
+  "coins": 10,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780014/gift/1_yky2po.webp",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 2,
+  "name": "Heart Animation",
+  "category": "General Gifts",
+  "coins": 15,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780013/gift/2_tdh5qy.webp",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 3,
+  "name": "Teddy Bear",
+  "category": "General Gifts",
+  "coins": 20,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780012/gift/3_siiq8j.webp",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 4,
+  "name": "Box of Chocolates",
+  "category": "General Gifts",
+  "coins": 25,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780011/gift/4_vo43s4.webp",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 5,
+  "name": "Champagne Bottle",
+  "category": "General Gifts",
+  "coins": 30,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780010/gift/5_h3pnds.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 6,
+  "name": "Love Letter",
+  "category": "General Gifts",
+  "coins": 8,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780009/gift/6_cprpwa.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 7,
+  "name": "Red Rose",
+  "category": "General Gifts",
+  "coins": 5,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780008/gift/7_xaepff.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 8,
+  "name": "Candlelight Dinner Animation",
+  "category": "General Gifts",
+  "coins": 40,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780007/gift/8_elhhfi.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 9,
+  "name": "Luxury Car Animation",
+  "category": "General Gifts",
+  "coins": 100,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780007/gift/9_i8hpas.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 10,
+  "name": "Cute Puppy Animation",
+  "category": "General Gifts",
+  "coins": 35,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780006/gift/10_p3thwi.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 11,
+  "name": "Vacation Trip Animation (Beach/Resort)",
+  "category": "General Gifts",
+  "coins": 120,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780005/gift/11_kmzjhf.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 12,
+  "name": "Balloon Bouquet",
+  "category": "General Gifts",
+  "coins": 15,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780004/gift/12_qks6za.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 13,
+  "name": "Golden Heart",
+  "category": "General Gifts",
+  "coins": 60,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780003/gift/13_cbedza.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 14,
+  "name": "Fireworks Display",
+  "category": "General Gifts",
+  "coins": 90,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780002/gift/14_mbkrbk.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 15,
+  "name": "Custom Voice Message",
+  "category": "General Gifts",
+  "coins": 50,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780001/gift/15_fmgvco.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 16,
+  "name": "Gift Card Image",
+  "category": "General Gifts",
+  "coins": 20,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780000/gift/16_wiartd.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 17,
+  "name": "Starry Night Animation",
+  "category": "General Gifts",
+  "coins": 55,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733780000/gift/17_zengrf.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 18,
+  "name": "Surprise Box (Random Gift)",
+  "category": "General Gifts",
+  "coins": 25,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779998/gift/18_xoqyeh.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 19,
+  "name": "Diamond Ring",
+  "category": "Jewelry Gifts",
+  "coins": 50,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779998/gift/19_k83gbg.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 20,
+  "name": "Gold Necklace",
+  "category": "Jewelry Gifts",
+  "coins": 70,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779997/gift/20_nsqnsi.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 21,
+  "name": "Silver Bracelet",
+  "category": "Jewelry Gifts",
+  "coins": 30,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779996/gift/21_tmiuxk.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 22,
+  "name": "Platinum Earrings",
+  "category": "Jewelry Gifts",
+  "coins": 60,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779995/gift/22_zikurq.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 23,
+  "name": "Ruby Pendant",
+  "category": "Jewelry Gifts",
+  "coins": 45,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779994/gift/23_x6adpa.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 24,
+  "name": "Sapphire Brooch",
+  "category": "Jewelry Gifts",
+  "coins": 55,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779993/gift/24_edfrqd.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 25,
+  "name": "Emerald Anklet",
+  "category": "Jewelry Gifts",
+  "coins": 40,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779994/gift/25_ar4tcs.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 26,
+  "name": "Pearl Necklace",
+  "category": "Jewelry Gifts",
+  "coins": 35,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779992/gift/26_l1ohl2.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 27,
+  "name": "Gold Bangle",
+  "category": "Jewelry Gifts",
+  "coins": 50,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779991/gift/27_pz76km.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 28,
+  "name": "Amethyst Earrings",
+  "category": "Jewelry Gifts",
+  "coins": 20,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779990/gift/28_icdf03.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 29,
+  "name": "Crystal Tiara",
+  "category": "Jewelry Gifts",
+  "coins": 90,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779977/gift/29_swujrj.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 30,
+  "name": "Rose Gold Bracelet",
+  "category": "Jewelry Gifts",
+  "coins": 45,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779974/gift/30_vi85pt.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 31,
+  "name": "Diamond Stud Earrings",
+  "category": "Jewelry Gifts",
+  "coins": 55,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779975/gift/31_hysrkd.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 32,
+  "name": "Silver Locket",
+  "category": "Jewelry Gifts",
+  "coins": 25,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779989/gift/32_wnxf1u.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 33,
+  "name": "Cubic Zirconia Ring",
+  "category": "Jewelry Gifts",
+  "coins": 15,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779988/gift/33_bcpakv.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 34,
+  "name": "Opal Pendant",
+  "category": "Jewelry Gifts",
+  "coins": 30,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779987/gift/34_kmoie9.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 35,
+  "name": "Golden Crown",
+  "category": "Jewelry Gifts",
+  "coins": 100,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779973/gift/35_co5cxv.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 36,
+  "name": "Luxury Yacht Animation",
+  "category": "Luxury and Special Gifts",
+  "coins": 150,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779963/gift/36_l0kihl.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 37,
+  "name": "Private Jet Animation",
+  "category": "Luxury and Special Gifts",
+  "coins": 200,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779987/gift/37_sabuze.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 38,
+  "name": "Designer Handbag",
+  "category": "Luxury and Special Gifts",
+  "coins": 80,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779985/gift/38_p0tnig.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 39,
+  "name": "High-End Watch",
+  "category": "Luxury and Special Gifts",
+  "coins": 110,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779985/gift/39_cipbmv.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 40,
+  "name": "3D Rose Bouquet",
+  "category": "Luxury and Special Gifts",
+  "coins": 20,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779983/gift/40_nsozqb.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 41,
+  "name": "Spa Day Animation",
+  "category": "Luxury and Special Gifts",
+  "coins": 50,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779982/gift/41_wycyb4.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 42,
+  "name": "Fine Perfume Bottle",
+  "category": "Luxury and Special Gifts",
+  "coins": 35,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779981/gift/42_q2rcz9.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 43,
+  "name": "Love Song Performance (Virtual)",
+  "category": "Luxury and Special Gifts",
+  "coins": 75,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779980/gift/43_nypwp4.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 44,
+  "name": "Heartfelt Poem Image",
+  "category": "Luxury and Special Gifts",
+  "coins": 15,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779979/gift/44_k0h0l1.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 45,
+  "name": "Virtual Dinner for Two (Customizable)",
+  "category": "Luxury and Special Gifts",
+  "coins": 60,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779978/gift/45_s3kblz.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 46,
+  "name": "Gemstone-Encrusted Watch",
+  "category": "Special Jewelry Gifts",
+  "coins": 120,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779972/gift/46_jf8n3z.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 47,
+  "name": "Diamond-Encrusted Bracelet",
+  "category": "Special Jewelry Gifts",
+  "coins": 90,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779973/gift/47_ceal0j.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 48,
+  "name": "Black Onyx Ring",
+  "category": "Special Jewelry Gifts",
+  "coins": 35,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779970/gift/48_j3pbjt.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 49,
+  "name": "Turquoise Pendant",
+  "category": "Special Jewelry Gifts",
+  "coins": 30,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779961/gift/49_bhij06.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 50,
+  "name": "Topaz Earrings",
+  "category": "Special Jewelry Gifts",
+  "coins": 25,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779969/gift/50_tsvr00.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 51,
+  "name": "Ruby-Encrusted Crown",
+  "category": "Special Jewelry Gifts",
+  "coins": 130,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779968/gift/51_r1ao0j.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 52,
+  "name": "Swarovski Crystal Necklace",
+  "category": "Special Jewelry Gifts",
+  "coins": 60,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779961/gift/52_wuxytk.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 53,
+  "name": "Moonstone Ring",
+  "category": "Special Jewelry Gifts",
+  "coins": 20,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779966/gift/53_v6ylvl.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 54,
+  "name": "Infinity Symbol Necklace",
+  "category": "Special Jewelry Gifts",
+  "coins": 40,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779965/gift/54_ofsnvh.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 55,
+  "name": "Dual-Heart Diamond Ring",
+  "category": "Special Jewelry Gifts",
+  "coins": 75,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779964/gift/55_dupimf.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 56,
+  "name": "Valentine’s Day Special Heart Box",
+  "category": "Seasonal & Holiday-Themed Gifts",
+  "coins": 20,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779959/gift/56_whq5xg.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 57,
+  "name": "Christmas Tree with Ornaments",
+  "category": "Seasonal & Holiday-Themed Gifts",
+  "coins": 25,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779958/gift/57_o4vwhl.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 58,
+  "name": "Easter Egg Basket",
+  "category": "Seasonal & Holiday-Themed Gifts",
+  "coins": 15,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779956/gift/58_dljppf.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 59,
+  "name": "New Year’s Firework Display",
+  "category": "Seasonal & Holiday-Themed Gifts",
+  "coins": 90,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779955/gift/59_evdgj6.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 60,
+  "name": "Halloween Pumpkin with Candy",
+  "category": "Seasonal & Holiday-Themed Gifts",
+  "coins": 10,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779954/gift/60_zqjcec.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 61,
+  "name": "Thanksgiving Feast Animation",
+  "category": "Seasonal & Holiday-Themed Gifts",
+  "coins": 50,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779953/gift/61_ezl1ki.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 62,
+  "name": "Anniversary Gift Box",
+  "category": "Seasonal & Holiday-Themed Gifts",
+  "coins": 45,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779951/gift/62_i7smrl.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 63,
+  "name": "Virtual Concert Ticket",
+  "category": "Virtual Experiences",
+  "coins": 70,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779949/gift/63_pnmzy4.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 64,
+  "name": "Movie Night Animation",
+  "category": "Virtual Experiences",
+  "coins": 40,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779949/gift/64_is7otx.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 65,
+  "name": "Picnic Basket Animation",
+  "category": "Virtual Experiences",
+  "coins": 35,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779943/gift/65_hkca5p.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 66,
+  "name": "Virtual Hot Air Balloon Ride",
+  "category": "Virtual Experiences",
+  "coins": 85,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779948/gift/66_iyzzxn.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 67,
+  "name": "Star Gazing Experience",
+  "category": "Virtual Experiences",
+  "coins": 60,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779946/gift/67_agbkua.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 68,
+  "name": "Horse-Drawn Carriage Ride",
+  "category": "Virtual Experiences",
+  "coins": 100,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779945/gift/68_ukeh9v.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 69,
+  "name": "Dance Animation (Ballroom Style)",
+  "category": "Virtual Experiences",
+  "coins": 55,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779944/gift/69_k4ya4z.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 70,
+  "name": "Animated Heart Balloon",
+  "category": "Unique and Fun Gifts",
+  "coins": 10,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779944/gift/70_iob0ag.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 71,
+  "name": "Animated Hug Emoji",
+  "category": "Unique and Fun Gifts",
+  "coins": 15,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779941/gift/71_ohxy3u.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 72,
+  "name": "Confetti Popper Animation",
+  "category": "Unique and Fun Gifts",
+  "coins": 5,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779942/gift/72_obgcl3.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 73,
+  "name": "Virtual Gift Card (Customizable Message)",
+  "category": "Unique and Fun Gifts",
+  "coins": 20,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779940/gift/73_k9adap.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 74,
+  "name": "Digital Bouquet with Animated Butterflies",
+  "category": "Unique and Fun Gifts",
+  "coins": 25,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779942/gift/74_zle5z5.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 75,
+  "name": "Virtual Pet Cat",
+  "category": "Unique and Fun Gifts",
+  "coins": 35,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779939/gift/75_cue6gn.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 76,
+  "name": "Virtual Pet Dog",
+  "category": "Unique and Fun Gifts",
+  "coins": 35,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779938/gift/76_yytjgc.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 77,
+  "name": "Mini Drone Animation",
+  "category": "Unique and Fun Gifts",
+  "coins": 45,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779936/gift/77_mv7ch7.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 78,
+  "name": "Luxury Sports Car Animation",
+  "category": "Unique and Fun Gifts",
+  "coins": 150,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779935/gift/78_ac7vua.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 79,
+  "name": "Personalized Thank You Card",
+  "category": "Unique and Fun Gifts",
+  "coins": 15,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779934/gift/79_u5zjbx.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 80,
+  "name": "Diamond Crown",
+  "category": "Unique and Fun Gifts",
+  "coins": 150,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779933/gift/80_ky4j4m.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 81,
+  "name": "Designer Shoe Animation",
+  "category": "Unique and Fun Gifts",
+  "coins": 50,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779929/gift/81_aiodif.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 82,
+  "name": "Luxury Cruise Animation",
+  "category": "Unique and Fun Gifts",
+  "coins": 200,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779932/gift/82_sr3fmt.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 83,
+  "name": "Virtual Island Getaway",
+  "category": "Unique and Fun Gifts",
+  "coins": 250,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779931/gift/83_daq9yn.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 84,
+  "name": "Gold and Sapphire Cufflinks",
+  "category": "Unique and Fun Gifts",
+  "coins": 60,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779930/gift/84_tgqalw.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 85,
+  "name": "Full Moon and Stars Animation",
+  "category": "Unique and Fun Gifts",
+  "coins": 40,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779929/gift/85_n1fij7.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 86,
+  "name": "Exclusive Wine Bottle Animation",
+  "category": "Unique and Fun Gifts",
+  "coins": 30,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779928/gift/86_g6kqki.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 87,
+  "name": "Virtual Golden Trophy",
+  "category": "Unique and Fun Gifts",
+  "coins": 70,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779927/gift/87_zrdrjz.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 88,
+  "name": "VIP Status Gift",
+  "category": "Unique and Fun Gifts",
+  "coins": 100,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779926/gift/88_i07zix.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 89,
+  "name": "Interactive Puzzle Gift (Recipient must solve)",
+  "category": "Interactive Gifts",
+  "coins": 20,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779925/gift/89_plk4mt.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 90,
+  "name": "Virtual Arcade Game Token",
+  "category": "Interactive Gifts",
+  "coins": 25,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779924/gift/90_nwxznx.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 91,
+  "name": "Love Quiz Game Gift",
+  "category": "Interactive Gifts",
+  "coins": 30,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779921/gift/91_kqacwh.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 92,
+  "name": "Interactive Music Playlist (Dedicated songs)",
+  "category": "Interactive Gifts",
+  "coins": 50,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779923/gift/92_c5fd8o.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 93,
+  "name": "Virtual Helicopter Tour Animation",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 250,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779920/gift/93_lpsm76.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 94,
+  "name": "Virtual Private Jet Charter (Animated)",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 300,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779920/gift/94_c1fggf.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 95,
+  "name": "Royal Crown with Gems Animation",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 200,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779919/gift/95_nkhgxx.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 96,
+  "name": "Luxury Yacht Experience (Animated Scene)",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 300,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779918/gift/96_cprglg.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 97,
+  "name": "Exclusive Custom Avatar (Unique design)",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 180,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779916/gift/97_h6vfdg.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 98,
+  "name": "Golden Throne with Animation",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 220,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779915/gift/98_yg2hcu.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 99,
+  "name": "Designer Dress Animation",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 150,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779914/gift/99_eijrbt.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 100,
+  "name": "VIP Invitation to an Online Event (Special access)",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 200,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779914/gift/100_vvbpfn.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 101,
+  "name": "Golden Trophy with Personalized Message",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 170,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779914/gift/101_ubxamq.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 102,
+  "name": "3D Diamond-Covered Box (Animated)",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 250,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779914/gift/102_x46gov.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 103,
+  "name": "Virtual Star Naming Certificate",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 275,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779914/gift/103_pjnuxh.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 104,
+  "name": "Animated Proposal Scene",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 230,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779912/gift/104_g5ae3x.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 105,
+  "name": "Luxury Vacation Resort Package (Animated)",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 350,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779914/gift/105_hrmhcw.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 106,
+  "name": "Exclusive Fine Jewelry Animation",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 260,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779912/gift/106_nb5i1q.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+},
+{
+  "_id": 107,
+  "name": "Exclusive Diamond Sapphire Set",
+  "category": "Exclusive & Premium Gifts",
+  "coins": 500,
+  "imageId": "https://res.cloudinary.com/dghzqlfxv/image/upload/v1733779912/gift/107_cjgwqo.jpg",
+  "_class": "com.jaytech.App.Model.Gifts"
+}]
