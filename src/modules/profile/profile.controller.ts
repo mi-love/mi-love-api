@@ -11,7 +11,7 @@ import {
 import { ProfileService } from './profile.service';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { Request } from 'express';
-import { DeleteProfileDto, EditProfileDto } from './profile.dto';
+import { DeleteProfileDto, EditProfileDto, fcmDto } from './profile.dto';
 import { User } from '@/common/decorator/user.decorator';
 import { UserWithoutPassword } from '@/common/types/db';
 
@@ -23,6 +23,11 @@ export class ProfileController {
   @Get('me')
   async getProfile(@Req() req: Request) {
     return this.profileService.getProfile(req.user);
+  }
+
+  @Post('save-fcm')
+  async saveFcm(@Body() body: fcmDto, @User() user: UserWithoutPassword) {
+    return this.profileService.saveFcm(body, user.id);
   }
 
   @Get(':id')

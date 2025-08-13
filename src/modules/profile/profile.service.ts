@@ -5,10 +5,11 @@ import {
 } from '@nestjs/common';
 import { DbService } from '@/database/database.service';
 import { UserWithoutPassword } from '@/common/types/db';
-import { DeleteProfileDto, EditProfileDto } from './profile.dto';
+import { DeleteProfileDto, EditProfileDto, fcmDto } from './profile.dto';
 import { InterestService } from '@/common/services/interest.service';
 import { AuthService } from '../auth/auth.service';
 import bcrypt from 'bcryptjs';
+import { Expo } from 'expo-server-sdk';
 
 @Injectable()
 export class ProfileService {
@@ -17,6 +18,33 @@ export class ProfileService {
     private interestService: InterestService,
     private authService: AuthService,
   ) {}
+
+  async saveFcm(body: fcmDto, userId: string) {
+    if (!body.fcmToken) {
+      return {
+        message: 'No action performed',
+      };
+    }
+
+    if (!Expo.isExpoPushToken(body.fcmToken)) {
+      throw new BadRequestException({
+        message: 'Invalid FCM token',
+      });
+    }
+
+    await this.db.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        fcm_token: body.fcmToken,
+      },
+    });
+
+    return {
+      message: 'FCM token saved successfully',
+    };
+  }
 
   async getProfile(user: UserWithoutPassword) {
     return {

@@ -75,3 +75,9 @@ export class DeleteProfileDto {
   })
   token: string;
 }
+
+export class fcmDto {
+  @IsString()
+  @IsOptional()
+  fcmToken: string;
+}

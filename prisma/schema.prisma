@@ -86,6 +86,8 @@ model user {
   gender            gender?
   date_of_birth     DateTime?
 
+  fcm_token String? @db.Text
+
   comments comment[] @relation("comment_user")
 
   auth_provider auth_provider @default(local)
