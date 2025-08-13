@@ -104,7 +104,7 @@ export class ProfileService {
         username: safeEdit(editProfileDto?.username),
         phone_number: safeEdit(editProfileDto?.phone_number),
         country: safeEdit(editProfileDto?.country),
-        gender: editProfileDto?.gender,
+        // gender: editProfileDto?.gender,
         bio: editProfileDto?.bio,
         profile_picture: editProfileDto?.profile_picture_id
           ? {

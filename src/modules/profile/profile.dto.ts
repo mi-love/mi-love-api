@@ -1,8 +1,7 @@
-import { gender } from '@prisma/client';
+// import { gender } from '@prisma/client';
 import {
   IsArray,
   IsDateString,
-  IsEnum,
   IsJWT,
   IsNotEmpty,
   IsOptional,
@@ -46,10 +45,10 @@ export class EditProfileDto {
   @IsOptional()
   home_address: string;
 
-  @IsString()
-  @IsOptional()
-  @IsEnum(gender)
-  gender: gender;
+  // @IsString()
+  // @IsOptional()
+  // @IsEnum(gender)
+  // gender: gender;
 
   @IsString()
   @IsOptional()
