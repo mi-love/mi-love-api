@@ -11,6 +11,7 @@ import { FriendsModule } from './modules/friends/friends.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { ChatModule } from './modules/chats/chat.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
     JwtGlobalModule,
     FriendsModule,
     WalletModule,
+    ChatModule,
   ],
   controllers: [],
   providers: [],
