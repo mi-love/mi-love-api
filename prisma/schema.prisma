@@ -56,6 +56,12 @@ enum currency {
   USD
 }
 
+enum message_type {
+  text
+  file
+  announcement
+}
+
 model blocked_users {
   id String @id @default(cuid())
 
@@ -108,6 +114,8 @@ model user {
   wallet         wallet          @relation(fields: [walletId], references: [id])
   walletId       String
   transaction    transaction[]
+  participant    participant[]
+  message        message[]
 
   @@map("users")
 }
@@ -186,12 +194,13 @@ model file {
   updated_at DateTime      @updatedAt
   type       file_type
 
-  ref    String?
-  post   post?    @relation(fields: [postId], references: [id])
-  postId String?
-  status status[]
-  user   user[]
-  gift   gift[]
+  ref     String?
+  post    post?     @relation(fields: [postId], references: [id])
+  postId  String?
+  status  status[]
+  user    user[]
+  gift    gift[]
+  message message[]
 
   @@map("files")
 }
@@ -211,7 +220,7 @@ model reaction {
 
 model wallet {
   id         String   @id @default(cuid())
-  balance    Float    @default(0)
+  balance    Decimal  @default(0) @db.Decimal(10, 2)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   user       user[]
@@ -251,7 +260,7 @@ model gift_category {
 
 model gift {
   id          String        @id @default(cuid())
-  points      Float
+  points      Decimal       @db.Decimal(10, 2)
   category    gift_category @relation(fields: [gift_category_id], references: [id])
   name        String?
   description String?       @db.Text
@@ -264,4 +273,56 @@ model gift {
   gift_category_id String
 
   @@map("gifts")
+}
+
+model chat {
+  id String @id @default(cuid())
+
+  participants participant[]
+  messages     message[]
+
+  can_send_messages Boolean @default(true)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("chats")
+}
+
+model participant {
+  id     String @id @default(cuid())
+  chat   chat   @relation(fields: [chatId], references: [id])
+  chatId String
+
+  mute DateTime?
+
+  user   user   @relation(fields: [userId], references: [id])
+  userId String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("participants")
+}
+
+model message {
+  id   String       @id @default(cuid())
+  type message_type
+
+  content String? @db.Text
+  edited  Boolean @default(false)
+  deleted Boolean @default(false)
+
+  file   file?   @relation(fields: [fileId], references: [id])
+  fileId String?
+
+  user   user?   @relation(fields: [userId], references: [id])
+  userId String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  chat       chat     @relation(fields: [chatId], references: [id])
+  chatId     String
+
+  @@map("messages")
 }

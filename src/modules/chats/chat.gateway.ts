@@ -62,7 +62,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @UseGuards(WsAuthGuard)
-  @SubscribeMessage('customName')
+  @SubscribeMessage('message')
   handleMessage(
     @ConnectedSocket() client: Socket,
     @MessageBody() message: any,
