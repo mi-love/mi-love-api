@@ -1,0 +1,10 @@
+{
+  "status": 200,
+  "data": {
+    "messaging_product": "whatsapp",
+    "contacts": [{ "input": "+2347085218197", "wa_id": "2347085218197" }],
+    "messages": [
+      { "id": "wamid.HBgNMjM0NzA4NTIxODE5NxUCABEYEkYzOEZDMjVFRTc5QTFDMUQyOAA=" }
+    ]
+  }
+}

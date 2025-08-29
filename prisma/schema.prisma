@@ -116,6 +116,7 @@ model user {
   transaction    transaction[]
   participant    participant[]
   message        message[]
+  panic_actions  panic_actions[]
 
   @@map("users")
 }
@@ -325,4 +326,16 @@ model message {
   chatId     String
 
   @@map("messages")
+}
+
+model panic_actions {
+  id        String  @id @default(cuid())
+  latitude  Float
+  longitude Float
+  location  String?
+  user      user    @relation(fields: [userId], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  userId     String
 }

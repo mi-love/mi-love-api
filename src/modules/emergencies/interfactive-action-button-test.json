@@ -1,0 +1,47 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "115751234720235",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "15550886012",
+              "phone_number_id": "115513451410785"
+            },
+            "contacts": [
+              {
+                "profile": {
+                  "name": "Senior Dev"
+                },
+                "wa_id": "2347085218197"
+              }
+            ],
+            "messages": [
+              {
+                "context": {
+                  "from": "15550886012",
+                  "id": "wamid.HBgNMjM0NzA4NTIxODE5NxUCABEYEkRFRTAzOURCMkI3RUY0MTQ4QgA="
+                },
+                "from": "2347085218197",
+                "id": "wamid.HBgNMjM0NzA4NTIxODE5NxUCABIYFDNBQjI4MDQ3MkZFQkRBNkNDRDE2AA==",
+                "timestamp": "1756485654",
+                "type": "interactive",
+                "interactive": {
+                  "type": "button_reply",
+                  "button_reply": {
+                    "id": "cmex26chq0000ffz3cyl4ydwv",
+                    "title": "View Location"
+                  }
+                }
+              }
+            ]
+          },
+          "field": "messages"
+        }
+      ]
+    }
+  ]
+}
