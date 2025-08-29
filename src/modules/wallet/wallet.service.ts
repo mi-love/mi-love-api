@@ -161,7 +161,10 @@ export class WalletService {
       },
     });
     return {
-      data: userInfo?.wallet,
+      data: {
+        ...userInfo?.wallet,
+        balance: Number(userInfo?.wallet?.balance ?? 0),
+      },
       message: 'Wallet information retrieved successfully',
     };
   }

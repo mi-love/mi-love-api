@@ -52,6 +52,11 @@ export class StatusService {
       },
       select: {
         id: true,
+        file: {
+          select: {
+            url: true,
+          },
+        },
       },
     });
 
@@ -113,6 +118,13 @@ export class StatusService {
     const statuses = await this.db.status.findMany({
       where,
       skip,
+      include: {
+        file: {
+          select: {
+            url: true,
+          },
+        },
+      },
       take: limit,
     });
 
