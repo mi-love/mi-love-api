@@ -12,6 +12,7 @@ import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { ChatModule } from './modules/chats/chat.module';
+import { EmergencyModule } from './modules/emergencies/emergency.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ChatModule } from './modules/chats/chat.module';
     FriendsModule,
     WalletModule,
     ChatModule,
+    EmergencyModule,
   ],
   controllers: [],
   providers: [],
