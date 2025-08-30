@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>One-to-One Chat Test</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+<body>
+  <h2>Mi-Love Chat</h2>
+  <div id="login" style="display:block;">
+    <label>Email: <input id="email" type="text"></label><br>
+    <label>Password: <input id="password" type="password"></label><br>
+    <button id="loginBtn">Login</button>
+  </div>
+  <div id="app" style="display:block;">
+    <h3>Welcome, <span id="username"></span></h3>
+    <div id="friends">
+      <h4>Friends</h4>
+      <ul id="friendsList"></ul>
+    </div>
+    <hr>
+    <div id="chat">
+      <label>Recipient User ID: <input id="toUserId" type="text"></label><br>
+      <div id="messages" style="border:1px solid #ccc; height:200px; overflow:auto; margin-bottom:10px;"></div>
+      <input id="message" type="text" placeholder="Type a message..." size="50">
+      <input id="file" type="file">
+      <button id="sendBtn">Send</button>
+    </div>
+  </div>
+  <script>
+    let socket;
+    let token;
+    let userId;
+    let username;
+    let chats = [];
+
+    document.getElementById('loginBtn').onclick = async function() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      if (!email || !password) {
+        alert('Please enter email and password.');
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:9999/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          token = data.access_token;
+          // Fetch profile to get user ID and username
+          const profileResponse = await fetch('http://localhost:9999/profile/me', {
+            headers: {
+              'Authorization': 'Bearer ' + token
+            }
+          });
+          const profile = await profileResponse.json();
+          userId = profile.id;
+          username = (profile.first_name || '') + ' ' + (profile.last_name || '').trim() || profile.username || profile.email;
+          document.getElementById('username').textContent = username;
+          document.getElementById('login').style.display = 'none';
+          document.getElementById('app').style.display = 'block';
+          loadFriends();
+          loadChats();
+          connectSocket();
+        } else {
+          alert('Login failed: ' + data.message);
+        }
+      } catch (error) {
+        alert('Error: ' + error.message);
+      }
+    };
+
+    function loadFriends() {
+      fetch('http://localhost:9999/friends', {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        const friendsList = document.getElementById('friendsList');
+        friendsList.innerHTML = '';
+        (data.data || data).forEach(friend => {
+          const li = document.createElement('li');
+          const name = (friend.first_name || '') + ' ' + (friend.last_name || '').trim() || friend.username || friend.email;
+          li.textContent = `${name} (ID: ${friend.id})`;
+          li.onclick = () => {
+            selectFriend(friend.id);
+          };
+          friendsList.appendChild(li);
+        });
+      })
+      .catch(error => console.error('Error loading friends:', error));
+    }
+
+    function loadChats() {
+      fetch('http://localhost:9999/chats', {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        chats = data.data || data;
+        // For now, not displaying chats separately, but store for later
+      })
+      .catch(error => console.error('Error loading chats:', error));
+    }
+
+    function selectFriend(friendId) {
+      document.getElementById('toUserId').value = friendId;
+      // Find chatId for this friend
+      const chat = chats.find(c => c.participants.some(p => p.userId === friendId));
+      if (chat) {
+        loadMessages(chat.id);
+      } else {
+        // No chat yet, clear messages
+        document.getElementById('messages').innerHTML = '';
+      }
+    }
+
+    function loadMessages(chatId) {
+      fetch(`http://localhost:9999/chats/${chatId}/messages`, {
+        headers: {
+          'Authorization': 'Bearer ' + token
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML = '';
+        (data.data || data).forEach(msg => {
+          const msgText = `[${msg.sender.first_name || msg.sender.username}]: ${msg.message}`;
+          appendMessage(msgText);
+        });
+      })
+      .catch(error => console.error('Error loading messages:', error));
+    }
+
+    function connectSocket() {
+      socket = io('http://localhost:9999/chat', {
+        extraHeaders: {
+          Authorization: 'Bearer ' + token
+        }
+      });
+
+      socket.on('connect', () => {
+        appendMessage('Connected as ' + username);
+      });
+
+      socket.on('private-message', (data) => {
+        let msg = `[${data.fromUsername || data.fromUserId}]: ${data.message}`;
+        if (data.file) {
+          msg += ` [File: ${data.file.url}]`;
+        }
+        appendMessage(msg);
+      });
+
+      socket.on('disconnect', () => {
+        appendMessage('Disconnected');
+      });
+    }
+
+    document.getElementById('sendBtn').onclick = async function() {
+      const toUserId = document.getElementById('toUserId').value;
+      const message = document.getElementById('message').value;
+      const fileInput = document.getElementById('file');
+      const file = fileInput.files[0];
+      let fileId = null;
+
+      if (!toUserId) {
+        alert('Select a recipient.');
+        return;
+      }
+
+      if (!message && !file) {
+        alert('Enter a message or select a file.');
+        return;
+      }
+
+      if (file) {
+        const formData = new FormData();
+        formData.append('files', file);
+
+        try {
+          const uploadResponse = await fetch('http://localhost:9999/upload', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + token
+            },
+            body: formData
+          });
+          const uploadData = await uploadResponse.json();
+          if (uploadData.data && uploadData.data.length > 0) {
+            fileId = uploadData.data[0].id;
+          } else {
+            alert('File upload failed.');
+            return;
+          }
+        } catch (error) {
+          alert('Error uploading file: ' + error.message);
+          return;
+        }
+      }
+
+      socket.emit('private-message', { toUserId, message, fileId });
+      appendMessage(`[Me -> ${toUserId}]: ${message || 'File sent'}`);
+      document.getElementById('message').value = '';
+      fileInput.value = '';
+    };
+
+    function appendMessage(msg) {
+      const messages = document.getElementById('messages');
+      messages.innerHTML += msg + '<br>';
+      messages.scrollTop = messages.scrollHeight;
+    }
+  </script>
+</body>
+</html>
