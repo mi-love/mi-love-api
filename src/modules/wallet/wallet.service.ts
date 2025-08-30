@@ -43,6 +43,23 @@ export class WalletService {
       });
     }
 
+    const isFriend = await this.db.user.findUnique({
+      where: {
+        id: user.id,
+        my_friends: {
+          some: {
+            id: receiverId,
+          },
+        },
+      },
+    });
+
+    if (!isFriend) {
+      throw new BadGatewayException({
+        message: 'You can only send gifts to friends',
+      });
+    }
+
     const wallet = await this.db.wallet.findUnique({
       where: {
         id: user.walletId,
@@ -80,7 +97,7 @@ export class WalletService {
 
       await prisma.transaction.create({
         data: {
-          amount: gift.points,
+          amount: Number(gift.points),
           type: 'debit',
           currency: 'USD',
           status: 'success',
@@ -95,7 +112,7 @@ export class WalletService {
 
       await prisma.transaction.create({
         data: {
-          amount: gift.points,
+          amount: Number(gift.points),
           type: 'credit',
           currency: 'USD',
           status: 'success',
@@ -170,6 +187,12 @@ export class WalletService {
   }
 
   async buyCoins(walletDto: WalletDto, user: UserWithoutPassword) {
+    if (walletDto.amount > 1000) {
+      throw new BadGatewayException({
+        message: 'Purchase amount cannot exceed 1000 USD',
+      });
+    }
+
     const id = `tx-${nanoid()}`;
     const payment = await this.paymentService.createPaymentLink({
       amount: walletDto.amount,
@@ -275,6 +298,57 @@ export class WalletService {
     return {
       message: 'Payment failed',
       status: 'failed',
+    };
+  }
+
+  async getTransactions(user: UserWithoutPassword, query: PaginationParams) {
+    const { limit, skip } = this.pagination.getPagination(query);
+    const where = { userId: user.id };
+    const all = await this.db.transaction.count({ where });
+    const transactions = await this.db.transaction.findMany({
+      where,
+      skip,
+      select: {
+        amount: true,
+        id: true,
+        currency: true,
+        status: true,
+        type: true,
+        created_at: true,
+      },
+      take: limit,
+      orderBy: {
+        created_at: 'desc',
+      },
+    });
+
+    return {
+      data: transactions,
+      meta: this.pagination.getMeta({
+        limit,
+        page: query.page,
+        totalItems: all,
+      }),
+    };
+  }
+
+  async getTransactionById(id: string, user: UserWithoutPassword) {
+    const transaction = await this.db.transaction.findUnique({
+      where: {
+        id,
+        userId: user.id,
+      },
+    });
+
+    if (!transaction) {
+      throw new BadGatewayException({
+        message: 'Transaction not found',
+      });
+    }
+
+    return {
+      data: transaction,
+      message: 'Transaction retrieved successfully',
     };
   }
 }

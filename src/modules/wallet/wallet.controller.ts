@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  UseGuards,
+  Param,
+} from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { sendGiftDto, WalletDto } from './wallet.dto';
 import { User } from '@/common/decorator/user.decorator';
@@ -35,6 +43,24 @@ export class WalletController {
     @User() user: UserWithoutPassword,
   ) {
     return this.walletService.sendGift(sendGiftBody, user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/transactions')
+  getTransactions(
+    @Query() query: PaginationParams,
+    @User() user: UserWithoutPassword,
+  ) {
+    return this.walletService.getTransactions(user, query);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('/transactions/:id')
+  getTransactionById(
+    @Param('id') id: string,
+    @User() user: UserWithoutPassword,
+  ) {
+    return this.walletService.getTransactionById(id, user);
   }
 
   @Get('/callback')
