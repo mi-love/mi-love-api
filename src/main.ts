@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule } from '@nestjs/swagger';
@@ -26,6 +25,7 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, documentFactory);
 
   app.useGlobalPipes(new ValidationPipe());
+  if (process.env.NODE_ENV === 'development') app.enableCors();
   await app.listen(PORT, () => {
     console.log(`😉 Server is running on port http://localhost:${PORT}`);
   });
