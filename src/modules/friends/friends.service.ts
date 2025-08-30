@@ -309,6 +309,28 @@ export class FriendsService {
         reason,
       },
     });
+
+    const chat = await this.db.chat.findFirst({
+      where: {
+        participants: {
+          every: {
+            userId: { in: [userId, friendId] },
+          },
+        },
+      },
+    });
+
+    if (chat) {
+      await this.db.chat.update({
+        where: {
+          id: chat.id,
+        },
+        data: {
+          can_send_messages: false,
+        },
+      });
+    }
+
     return {
       message: 'Blocked Users',
       data: {
@@ -354,6 +376,35 @@ export class FriendsService {
         },
       },
     });
+
+    // Update chat based on friendship status
+    const chat = await this.db.chat.findFirst({
+      where: {
+        participants: {
+          every: {
+            userId: { in: [userId, friendId] },
+          },
+        },
+      },
+    });
+
+    if (chat) {
+      const isFriend = await this.db.user.findFirst({
+        where: {
+          id: userId,
+          my_friends: { some: { id: friendId } },
+        },
+      });
+
+      await this.db.chat.update({
+        where: {
+          id: chat.id,
+        },
+        data: {
+          can_send_messages: !!isFriend,
+        },
+      });
+    }
 
     return {
       message: 'Unblocked Users',
