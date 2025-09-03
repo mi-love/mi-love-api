@@ -36,7 +36,7 @@ for item in $EXCLUDE_ITEMS; do
   EXCLUDE_STRING+="--exclude=$item "
 done
 
-rsync -av --progress "$PROJECT_ROOT/" "$TEMP_DIR/" $EXCLUDE_STRING
+rsync -a "$PROJECT_ROOT/" "$TEMP_DIR/" $EXCLUDE_STRING
 echo "✅ Project files copied successfully."
 
 # --- 3. Build the application in the temporary directory ---
@@ -56,8 +56,8 @@ echo "✅ Build completed successfully."
 # --- 4. Copy the build output back to the original project directory ---
 echo "🚚 Copying build files to the destination..."
 # Copy the 'dist' folder and 'node_modules' to the project root
-rsync -av "$TEMP_DIR/dist/" "$DESTINATION_DIR/dist/"
-rsync -av "$TEMP_DIR/node_modules/" "$DESTINATION_DIR/node_modules/"
+rsync -a "$TEMP_DIR/dist/" "$DESTINATION_DIR/dist/"
+rsync -a "$TEMP_DIR/node_modules/" "$DESTINATION_DIR/node_modules/"
 echo "✅ Build files copied to $DESTINATION_DIR."
 
 # --- 5. Manage PM2 process (start if not exists, else reload) ---
