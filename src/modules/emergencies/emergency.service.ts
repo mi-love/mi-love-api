@@ -19,10 +19,9 @@ export class EmergencyService {
 
   async handlePanicButtonPress(user: UserWithoutPassword, json: PanicDto) {
     const body = json ?? {};
-    const location = await this.locationService.getLocationWithCoords(
-      body.latitude,
-      body.longitude,
-    );
+    const location = await this.locationService
+      .getLocationWithCoords(body.latitude, body.longitude)
+      .catch((err) => console.log('Error getting location', err));
     const contact = user.emergency_contact;
     const loc = location?.display_name ?? 'N/A';
     const message = `
@@ -51,7 +50,7 @@ View Map: https://www.google.com/maps?q=${body.latitude},${body.longitude}
         message,
         type: 'text',
       });
-
+      console.log(response.status, "WHATS'APP");
       const messageId = response?.data?.messages?.[0].id;
       if (messageId) {
         await this.whatsappService.sendMessage({

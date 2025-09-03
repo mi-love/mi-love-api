@@ -213,7 +213,7 @@ export class WalletService {
       data: {
         id,
         amount: walletDto.amount,
-        type: 'debit',
+        type: 'credit',
         currency: 'USD',
         status: 'pending',
         payment_link: payment?.data.link,
@@ -279,8 +279,8 @@ export class WalletService {
       },
     });
 
-    const points = transactionDetails.amount * 10; // 1 USD = 10 points
-
+    const points = Number(transactionDetails.amount * 10); // 1 USD = 10 points
+    console.log('> Funded with ', points);
     await this.db.user.update({
       where: {
         id: transactionDetails.userId,

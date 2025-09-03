@@ -120,8 +120,13 @@ export class FriendsService {
               },
             },
           },
+          profile_picture: true,
         },
         skip,
+        omit: {
+          password: true,
+          fcm_token: true,
+        },
         take: limit,
         orderBy: {
           created_at: query?.order === 'desc' ? 'desc' : 'asc',
