@@ -8,6 +8,7 @@
   "scripts": {
     "build": "nest build",
     "postinstall": "prisma generate",
+    "deploy":"scripts/deploy.sh",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "env": "node ./scripts/env.js",
     "prestart": "yarn run env",

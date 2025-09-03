@@ -339,3 +339,4 @@ model panic_actions {
   updated_at DateTime @updatedAt
   userId     String
 }
+
