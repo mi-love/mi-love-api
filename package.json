@@ -117,5 +117,8 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   },
+  "engines": {
+    "node": ">=21"
+  },
   "packageManager": "yarn@1.22.22"
 }
