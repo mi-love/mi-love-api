@@ -19,22 +19,10 @@ import {
   SignupDto,
   VerifyOtpDto,
 } from './auth.dto';
-import { EmbeddingsService } from '@/transformers/embeddings.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private authService: AuthService,
-    private readonly embed: EmbeddingsService,
-  ) {}
-
-  @Get('test')
-  async test() {
-    await this.embed.extractionTest();
-    return {
-      message: 'Test completed',
-    };
-  }
+  constructor(private authService: AuthService) {}
 
   @Post('login')
   async login(@Body() loginDto: { email: string; password: string }) {
