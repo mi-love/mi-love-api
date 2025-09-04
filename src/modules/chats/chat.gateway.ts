@@ -76,6 +76,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { toUserId: string; message: string; fileId: string },
   ): Promise<void> {
+    console.log('first');
     const fromUser = client.data.user;
     const toSocketId = this.users.get(data.toUserId);
     if ((!data.message && !data.fileId) || !toSocketId) return;
@@ -141,15 +142,54 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     const messageType = data.fileId ? 'file' : 'text';
-    const savedMessage = await this.db.message.create({
-      data: {
-        type: messageType,
-        content: data.message,
-        fileId: data.fileId,
-        userId: fromUser.id,
-        chatId: chat.id,
-      },
-      include: { file: true, user: true },
+    console.log('sending', messageType);
+    const { savedMessage } = await this.db.$transaction(async (tx) => {
+      console.log('OGO Power');
+      const savedMessage = await tx.message.create({
+        data: {
+          type: messageType,
+          content: data.message,
+          fileId: data.fileId,
+          userId: fromUser.id,
+          chatId: chat.id,
+        },
+        include: { file: true, user: true },
+      });
+
+      const wallet = await tx.wallet.findFirst({
+        where: { id: fromUser.walletId },
+      });
+
+      console.log(wallet);
+      if (Number(wallet?.balance) < 0.5) {
+        this.server
+          .to(client.id)
+          .emit('error', { message: 'Insufficient balance to send message.' });
+        throw new BadGatewayException({
+          message: 'Insufficient balance to send message.',
+        });
+      }
+      await tx.wallet.update({
+        where: { id: fromUser.walletId },
+        data: { balance: { decrement: 0.5 } },
+      });
+      // await tx.transaction.create({
+      //   data: {
+      //     amount: 0.5,
+      //     type: 'debit',
+      //     currency: 'USD',
+      //     description: 'Sent Message',
+      //     user: {
+      //       connect: {
+      //         id: fromUser.id,
+      //       },
+      //     },
+      //   },
+      // });
+
+      return {
+        savedMessage,
+      };
     });
 
     const file = data?.fileId

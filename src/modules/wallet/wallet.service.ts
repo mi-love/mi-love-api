@@ -266,6 +266,22 @@ export class WalletService {
           status: 'success',
         },
       });
+      const points = Number(transactionDetails.amount * 10); // 1 USD = 10 points
+      // console.log('> Funded with ', points);
+      await this.db.user.update({
+        where: {
+          id: transactionDetails.userId,
+        },
+        data: {
+          wallet: {
+            update: {
+              balance: {
+                increment: points,
+              },
+            },
+          },
+        },
+      });
       return {
         message: 'Payment successful',
         status: 'success',
@@ -279,22 +295,6 @@ export class WalletService {
       },
     });
 
-    const points = Number(transactionDetails.amount * 10); // 1 USD = 10 points
-    console.log('> Funded with ', points);
-    await this.db.user.update({
-      where: {
-        id: transactionDetails.userId,
-      },
-      data: {
-        wallet: {
-          update: {
-            balance: {
-              increment: points,
-            },
-          },
-        },
-      },
-    });
     return {
       message: 'Payment failed',
       status: 'failed',

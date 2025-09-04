@@ -225,37 +225,37 @@ export class FriendsService {
             can_send_messages: true,
           },
         });
-      } else {
-        await tx.chat.create({
-          data: {
-            participants: {
-              create: [
-                {
-                  user: {
-                    connect: {
-                      id: userId,
-                    },
-                  },
-                },
-                {
-                  user: {
-                    connect: {
-                      id: friendId,
-                    },
-                  },
-                },
-              ],
-            },
-            messages: {
-              create: {
-                type: 'announcement',
-                content: 'You are now friends',
-              },
-            },
-            can_send_messages: true,
-          },
-        });
       }
+
+      await tx.chat.create({
+        data: {
+          participants: {
+            create: [
+              {
+                user: {
+                  connect: {
+                    id: userId,
+                  },
+                },
+              },
+              {
+                user: {
+                  connect: {
+                    id: friendId,
+                  },
+                },
+              },
+            ],
+          },
+          messages: {
+            create: {
+              type: 'announcement',
+              content: 'You are now friends',
+            },
+          },
+          can_send_messages: true,
+        },
+      });
     });
 
     return {
