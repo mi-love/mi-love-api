@@ -14,3 +14,12 @@ export class sendGiftDto {
   @IsString()
   receiverId: string;
 }
+
+export class DeductDto {
+  @IsNumber()
+  @Transform(({ value }) => Number(value))
+  amount: number;
+
+  @IsString()
+  description: string;
+}

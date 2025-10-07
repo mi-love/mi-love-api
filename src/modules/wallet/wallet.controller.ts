@@ -8,7 +8,7 @@ import {
   Param,
 } from '@nestjs/common';
 import { WalletService } from './wallet.service';
-import { sendGiftDto, WalletDto } from './wallet.dto';
+import { sendGiftDto, WalletDto, DeductDto } from './wallet.dto';
 import { User } from '@/common/decorator/user.decorator';
 import { UserWithoutPassword } from '@/common/types/db';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -61,6 +61,12 @@ export class WalletController {
     @User() user: UserWithoutPassword,
   ) {
     return this.walletService.getTransactionById(id, user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('/deduct')
+  deductCoins(@Body() deductDto: DeductDto, @User() user: UserWithoutPassword) {
+    return this.walletService.deductCoins(deductDto, user);
   }
 
   @Get('/callback')

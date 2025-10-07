@@ -1,5 +1,5 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
-import { sendGiftDto, WalletDto } from './wallet.dto';
+import { sendGiftDto, WalletDto, DeductDto } from './wallet.dto';
 import { UserWithoutPassword } from '@/common/types/db';
 import { DbService } from '@/database/database.service';
 import { PaymentService } from '@/common/services/payment.service';
@@ -350,6 +350,54 @@ export class WalletService {
     return {
       data: transaction,
       message: 'Transaction retrieved successfully',
+    };
+  }
+
+  async deductCoins(deductDto: DeductDto, user: UserWithoutPassword) {
+    const { amount, description } = deductDto;
+
+    const wallet = await this.db.wallet.findUnique({
+      where: {
+        id: user.walletId,
+      },
+    });
+
+    if (Number(wallet?.balance ?? "0") < amount) {
+      throw new BadGatewayException({
+        message: 'Insufficient balance',
+      });
+    }
+
+    await this.db.$transaction(async (prisma) => {
+      await prisma.wallet.update({
+        where: {
+          id: user.walletId,
+        },
+        data: {
+          balance: {
+            decrement: amount,
+          },
+        },
+      });
+
+      await prisma.transaction.create({
+        data: {
+          amount: -amount,
+          type: 'debit',
+          currency: 'USD',
+          status: 'success',
+          description,
+          user: {
+            connect: {
+              id: user.id,
+            },
+          },
+        },
+      });
+    });
+
+    return {
+      message: 'Coins deducted successfully',
     };
   }
 }
