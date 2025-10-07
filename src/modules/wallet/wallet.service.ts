@@ -43,22 +43,22 @@ export class WalletService {
       });
     }
 
-    const isFriend = await this.db.user.findUnique({
-      where: {
-        id: user.id,
-        my_friends: {
-          some: {
-            id: receiverId,
-          },
-        },
-      },
-    });
+    // const isFriend = await this.db.user.findUnique({
+    //   where: {
+    //     id: user.id,
+    //     my_friends: {
+    //       some: {
+    //         id: receiverId,
+    //       },
+    //     },
+    //   },
+    // });
 
-    if (!isFriend) {
-      throw new BadGatewayException({
-        message: 'You can only send gifts to friends',
-      });
-    }
+    // if (!isFriend) {
+    //   throw new BadGatewayException({
+    //     message: 'You can only send gifts to friends',
+    //   });
+    // }
 
     const wallet = await this.db.wallet.findUnique({
       where: {
@@ -66,7 +66,8 @@ export class WalletService {
       },
     });
 
-    if (!wallet || wallet.balance < gift.points) {
+    // console.log(wallet?.balance, gift.points);
+    if (Number(wallet?.balance ?? "0") < Number(gift.points)) {
       throw new BadGatewayException({
         message: 'Insufficient balance',
       });
