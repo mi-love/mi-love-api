@@ -13,6 +13,7 @@ import { join } from 'path';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { ChatModule } from './modules/chats/chat.module';
 import { EmergencyModule } from './modules/emergencies/emergency.module';
+import { NotificationModule } from './modules/notifications/notification.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { EmergencyModule } from './modules/emergencies/emergency.module';
     FriendsModule,
     WalletModule,
     ChatModule,
+    NotificationModule,
     EmergencyModule,
   ],
   controllers: [],

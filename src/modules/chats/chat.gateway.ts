@@ -12,6 +12,9 @@ import { BadGatewayException, Logger, UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { WsAuthGuard } from '@/common/guards/jwt-auth-ws.guard';
 import { DbService } from '@/database/database.service';
+import { NotificationService } from '../notifications/notification.service';
+import { UserWithoutPassword } from '@/common/types/db';
+import { file } from '@prisma/client';
 @WebSocketGateway({
   namespace: 'chat',
   cors: {
@@ -29,6 +32,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private jwtService: JwtService,
     private db: DbService,
+    private notificationService: NotificationService,
   ) {}
 
   async handleConnection(client: Socket): Promise<void> {
@@ -49,6 +53,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         },
         include: {
           wallet: true,
+          profile_picture: true,
         },
       });
       client.data.user = user;
@@ -78,7 +83,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @ConnectedSocket() client: Socket,
     @MessageBody() data: { toUserId: string; message: string; fileId: string },
   ): Promise<void> {
-    const fromUser = client.data.user;
+    const fromUser = client.data.user as UserWithoutPassword & {
+      profile_picture: file | null;
+    };
     console.log('Sending message>>>');
 
     if (!data.toUserId || data.toUserId.trim() === '') {
@@ -225,6 +232,25 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         })
       : null;
 
+    // @UTILS
+    const truncateText = (text: string, maxLength: number) => {
+      if (text.length <= maxLength) return text;
+      return text.slice(0, maxLength) + '...';
+    };
+
+    this.notificationService
+      .sendNotification({
+        title: `New message from ${fromUser.username}`,
+        message: data?.message
+          ? truncateText(data.message, 100)
+          : 'Sent a file',
+        type: 'message',
+        userId: toUser.id,
+        image: file ? file.url : fromUser?.profile_picture?.url,
+      })
+      .catch(() => {
+        console.log('[FAILED TO SEND NOTIFICATION]');
+      });
     if (toSocketId) {
       this.server.to(toSocketId).emit('private-message', {
         fromUserId: fromUser.id,

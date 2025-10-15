@@ -62,6 +62,13 @@ enum message_type {
   announcement
 }
 
+enum notification_type {
+  message
+  security
+  system
+  social
+}
+
 model blocked_users {
   id String @id @default(cuid())
 
@@ -117,6 +124,7 @@ model user {
   participant    participant[]
   message        message[]
   panic_actions  panic_actions[]
+  notification   notification[]
 
   @@map("users")
 }
@@ -340,3 +348,17 @@ model panic_actions {
   userId     String
 }
 
+model notification {
+  id      String            @id @default(cuid())
+  title   String
+  body    String?
+  type    notification_type
+  is_read Boolean           @default(false)
+  user    user              @relation(fields: [userId], references: [id])
+  userId  String
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("notifications")
+}
