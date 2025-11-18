@@ -5,6 +5,11 @@ import { PrismaClient } from '@prisma/client';
 @Injectable()
 export class DbService extends PrismaClient implements OnModuleInit {
   async onModuleInit() {
-    await this.$connect();
+    try {
+      await this.$connect();
+      console.log('DB connected');
+    } catch {
+      console.log('Failed to connect');
+    }
   }
 }

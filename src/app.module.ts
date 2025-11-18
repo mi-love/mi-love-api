@@ -14,6 +14,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { ChatModule } from './modules/chats/chat.module';
 import { EmergencyModule } from './modules/emergencies/emergency.module';
 import { NotificationModule } from './modules/notifications/notification.module';
+import { StreamModule } from './modules/streams/stream.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { NotificationModule } from './modules/notifications/notification.module'
     ChatModule,
     NotificationModule,
     EmergencyModule,
+    StreamModule,
   ],
   controllers: [],
   providers: [],
