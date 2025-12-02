@@ -300,12 +300,12 @@ model chat {
 
 model participant {
   id     String @id @default(cuid())
-  chat   chat   @relation(fields: [chatId], references: [id])
+  chat   chat   @relation(fields: [chatId], references: [id], onDelete: Cascade)
   chatId String
 
   mute DateTime?
 
-  user   user   @relation(fields: [userId], references: [id])
+  user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
   created_at DateTime @default(now())
@@ -325,12 +325,12 @@ model message {
   file   file?   @relation(fields: [fileId], references: [id])
   fileId String?
 
-  user   user?   @relation(fields: [userId], references: [id])
+  user   user?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-  chat       chat     @relation(fields: [chatId], references: [id])
+  chat       chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
   chatId     String
 
   @@map("messages")

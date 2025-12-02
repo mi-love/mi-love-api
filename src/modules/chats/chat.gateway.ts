@@ -86,7 +86,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const fromUser = client.data.user as UserWithoutPassword & {
       profile_picture: file | null;
     };
-    console.log('Sending message>>>');
 
     if (!data.toUserId || data.toUserId.trim() === '') {
       client.emit('error', { message: 'Invalid recipient user ID.' });
@@ -104,9 +103,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     const toSocketId = this.users.get(data.toUserId);
-    // console.log(toSocketId)
-    // will send if only only
-    // if ((!data.message || !toSocketId)) return;
 
     const toUser = await this.db.user.findUnique({
       where: { id: data.toUserId },
@@ -205,20 +201,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         where: { id: fromUser.walletId },
         data: { balance: { decrement: this.MESSAGE_FEE } },
       });
-      // await tx.transaction.create({
-      //   data: {
-      //     amount: this.MESSAGE_FEE,
-      //     type: 'debit',
-      //     currency: 'USD',
-      //     status:"success",
-      //     description: 'Sent Message Fee',
-      //     user: {
-      //       connect: {
-      //         id: fromUser.id,
-      //       },
-      //     },
-      //   },
-      // });
 
       return {
         savedMessage,
@@ -232,7 +214,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         })
       : null;
 
-    // @UTILS
     const truncateText = (text: string, maxLength: number) => {
       if (text.length <= maxLength) return text;
       return text.slice(0, maxLength) + '...';
@@ -263,6 +244,115 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.logger.log(
       `Message sent from user ${fromUser.id} to user ${data.toUserId}`,
+    );
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('call')
+  async handleInitiateCall(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { toUserId: string; callId: string },
+  ): Promise<void> {
+    const fromUser = client.data.user as UserWithoutPassword & {
+      profile_picture: file | null;
+    };
+
+    if (!data.toUserId || data.toUserId.trim() === '') {
+      client.emit('error', { message: 'Invalid recipient user ID.' });
+      return;
+    }
+
+    if (!data.callId || data.callId.trim() === '') {
+      client.emit('error', { message: 'Invalid call ID.' });
+      return;
+    }
+
+    const toSocketId = this.users.get(data.toUserId);
+
+    const toUser = await this.db.user.findUnique({
+      where: { id: data.toUserId },
+    });
+
+    if (!toUser) {
+      client.emit('error', { message: 'Recipient user not found.' });
+      return;
+    }
+
+    const isBlocked = await this.db.blocked_users.findFirst({
+      where: {
+        OR: [
+          { userId: fromUser.id, blockedUserId: data.toUserId },
+          { userId: data.toUserId, blockedUserId: fromUser.id },
+        ],
+      },
+    });
+
+    if (isBlocked) {
+      client.emit('error', { message: 'You cannot call this user.' });
+      return;
+    }
+
+    const isFriend = await this.db.user.findFirst({
+      where: {
+        id: fromUser.id,
+        OR: [
+          {
+            friends: { some: { id: data.toUserId } },
+          },
+          {
+            my_friends: { some: { id: data.toUserId } },
+          },
+        ],
+      },
+    });
+
+    if (!isFriend) {
+      client.emit('error', { message: 'You can only call friends.' });
+      return;
+    }
+
+    let chat = await this.db.chat.findFirst({
+      where: {
+        participants: {
+          every: {
+            userId: { in: [fromUser.id, data.toUserId] },
+          },
+        },
+      },
+      include: { participants: true },
+    });
+
+    if (!chat) {
+      chat = await this.db.chat.create({
+        data: {
+          participants: {
+            create: [{ userId: fromUser.id }, { userId: data.toUserId }],
+          },
+        },
+        include: { participants: true },
+      });
+    }
+
+    await this.db.message.create({
+      data: {
+        type: 'announcement',
+        content: `Call initiated - Call ID: ${data.callId}`,
+        userId: fromUser.id,
+        chatId: chat.id,
+      },
+    });
+
+    if (toSocketId) {
+      this.server.to(toSocketId).emit('incoming-call', {
+        fromUserId: fromUser.id,
+        fromUsername: fromUser.username,
+        callId: data.callId,
+        profilePicture: fromUser?.profile_picture?.url,
+      });
+    }
+
+    this.logger.log(
+      `Call initiated from user ${fromUser.id} to user ${data.toUserId} with callId ${data.callId}`,
     );
   }
 

@@ -201,6 +201,11 @@ export class FriendsService {
               id: friendId,
             },
           },
+          friends: {
+            connect: {
+              id: friendId,
+            },
+          },
         },
       });
 
@@ -273,9 +278,24 @@ export class FriendsService {
         id: userId,
       },
       data: {
+        friends: {
+          disconnect: {
+            id: friendId,
+          },
+        },
         my_friends: {
           disconnect: {
             id: friendId,
+          },
+        },
+      },
+    });
+
+    await this.db.chat.deleteMany({
+      where: {
+        participants: {
+          every: {
+            userId: { in: [userId, friendId] },
           },
         },
       },

@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable, Redirect } from '@nestjs/common';
 import { sendGiftDto, WalletDto, DeductDto } from './wallet.dto';
 import { UserWithoutPassword } from '@/common/types/db';
 import { DbService } from '@/database/database.service';
@@ -67,7 +67,7 @@ export class WalletService {
     });
 
     // console.log(wallet?.balance, gift.points);
-    if (Number(wallet?.balance ?? "0") < Number(gift.points)) {
+    if (Number(wallet?.balance ?? '0') < Number(gift.points)) {
       throw new BadGatewayException({
         message: 'Insufficient balance',
       });
@@ -283,10 +283,15 @@ export class WalletService {
           },
         },
       });
-      return {
-        message: 'Payment successful',
-        status: 'success',
-      };
+
+      console.log('Redirecting to transaction detail');
+      return Redirect(
+        `milove:///(settings)/wallet/transaction-detail?id=${tx_ref}`,
+      );
+      // return {
+      //   message: 'Payment successful',
+      //   status: 'success',
+      // };
     }
 
     await this.db.transaction.update({
@@ -362,7 +367,7 @@ export class WalletService {
       },
     });
 
-    if (Number(wallet?.balance ?? "0") < amount) {
+    if (Number(wallet?.balance ?? '0') < amount) {
       throw new BadGatewayException({
         message: 'Insufficient balance',
       });
