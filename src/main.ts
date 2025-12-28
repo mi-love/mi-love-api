@@ -14,6 +14,8 @@ async function bootstrap() {
     fs.mkdirSync(uploadPath);
   }
 
+  
+
   // swagger does setup
   const config = new DocumentBuilder()
     .setTitle('Mi-Love API')
