@@ -34,6 +34,7 @@ export class UploadController {
         message: 'No files to upload',
         data: [],
       };
-    return this.uploadService.uploadLocal(files);
+    // Use Cloudinary for uploads
+    return this.uploadService.uploadToCloudinary(files);
   }
 }
