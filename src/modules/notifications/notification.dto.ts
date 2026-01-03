@@ -1,4 +1,4 @@
-import { notification_type } from "@prisma/client";
+import { notification_type } from '@prisma/client';
 
 export class SendNotificationDto {
   userId: string;

@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable, Redirect } from '@nestjs/common';
+import { BadGatewayException, Injectable } from '@nestjs/common';
 import { sendGiftDto, WalletDto, DeductDto } from './wallet.dto';
 import { UserWithoutPassword } from '@/common/types/db';
 import { DbService } from '@/database/database.service';
@@ -233,7 +233,12 @@ export class WalletService {
     };
   }
 
-  async walletCallback(tx_ref: string) {
+  async walletCallback(
+    tx_ref: string,
+    status?: string,
+    transaction_id?: string,
+    reference?: string,
+  ) {
     if (!tx_ref) {
       throw new BadGatewayException({
         message: 'Invalid transaction',
@@ -259,8 +264,8 @@ export class WalletService {
     //   });
     // }
 
-    const status = await this.paymentService.verifyPayment(tx_ref);
-    if (status) {
+    const isPaymentSuccessful = await this.paymentService.verifyPayment(tx_ref);
+    if (isPaymentSuccessful) {
       await this.db.transaction.update({
         where: { id: tx_ref },
         data: {
@@ -285,9 +290,7 @@ export class WalletService {
       });
 
       console.log('Redirecting to transaction detail');
-      return Redirect(
-        `milove:///(settings)/wallet/transaction-detail?id=${tx_ref}`,
-      );
+      return `milove://payment-callback?status=successful&transaction_id=${transaction_id || tx_ref}&reference=${reference || tx_ref}`;
       // return {
       //   message: 'Payment successful',
       //   status: 'success',
@@ -301,10 +304,7 @@ export class WalletService {
       },
     });
 
-    return {
-      message: 'Payment failed',
-      status: 'failed',
-    };
+    return `milove://payment-callback?status=failed&reference=${reference || tx_ref}`;
   }
 
   async getTransactions(user: UserWithoutPassword, query: PaginationParams) {

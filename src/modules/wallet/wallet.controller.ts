@@ -6,8 +6,10 @@ import {
   Query,
   UseGuards,
   Param,
+  Redirect,
+  Res,
 } from '@nestjs/common';
-import { WalletService } from './wallet.service';
+import { Response } from 'express';
 import { sendGiftDto, WalletDto, DeductDto } from './wallet.dto';
 import { User } from '@/common/decorator/user.decorator';
 import { UserWithoutPassword } from '@/common/types/db';
@@ -70,7 +72,19 @@ export class WalletController {
   }
 
   @Get('/callback')
-  walletCallback(@Query('tx_ref') tx_ref: string) {
-    return this.walletService.walletCallback(tx_ref);
+  walletCallback(
+    @Query('tx_ref') tx_ref: string,
+    @Query('status') status?: string,
+    @Query('transaction_id') transaction_id?: string,
+    @Query('reference') reference?: string,
+    @Res() res: Response,
+  ) {
+    const redirectUrl = this.walletService.walletCallback(
+      tx_ref,
+      status,
+      transaction_id,
+      reference,
+    );
+    res.redirect(redirectUrl);
   }
 }

@@ -61,7 +61,7 @@ export class NotificationService {
     if (!Expo.isExpoPushToken(checkUser.fcm_token))
       return console.log('Invalid FCM Token');
     const message = {
-      to: checkUser.fcm_token as ExpoPushToken,
+      to: checkUser.fcm_token,
       sound: 'default',
       title: data.title,
       body: data.message,

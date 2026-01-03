@@ -58,9 +58,7 @@ export class UploadService {
         data: uploadedFiles,
       };
     } catch (error) {
-      throw new BadRequestException(
-        `File upload failed: ${error.message}`,
-      );
+      throw new BadRequestException(`File upload failed: ${error.message}`);
     }
   }
 
