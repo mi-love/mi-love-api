@@ -66,6 +66,11 @@ export class ProfileService {
         password: true,
         auth_provider: true,
       },
+      include: {
+        profile_picture: true,
+        interests: true,
+        posts: true,
+      },
     });
 
     if (!profile) {
