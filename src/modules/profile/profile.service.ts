@@ -70,9 +70,10 @@ export class ProfileService {
         profile_picture: true,
         interests: true,
         posts: true,
+        friends: true,
+        my_friends: true,
       },
     });
-
     if (!profile) {
       throw new NotFoundException({
         message: 'Profile not found',
