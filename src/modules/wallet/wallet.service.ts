@@ -290,11 +290,7 @@ export class WalletService {
       });
 
       console.log('Redirecting to transaction detail');
-      return {
-        success: true,
-        redirectUrl: `milove://payment-callback?status=successful&transaction_id=${transaction_id || tx_ref}&reference=${reference || tx_ref}`,
-        message: 'Payment successful',
-      };
+      return `milove://payment-callback?status=successful&transaction_id=${transaction_id || tx_ref}&reference=${reference || tx_ref}`;
       // return {
       //   message: 'Payment successful',
       //   status: 'success',
@@ -308,11 +304,7 @@ export class WalletService {
       },
     });
 
-    return {
-      success: false,
-      redirectUrl: `milove://payment-callback?status=failed&reference=${reference || tx_ref}`,
-      message: 'Payment failed',
-    };
+    return `milove://payment-callback?status=failed&reference=${reference || tx_ref}`;
   }
 
   async getTransactions(user: UserWithoutPassword, query: PaginationParams) {

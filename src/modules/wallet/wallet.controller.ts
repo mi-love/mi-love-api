@@ -6,7 +6,9 @@ import {
   Query,
   UseGuards,
   Param,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { sendGiftDto, WalletDto, DeductDto } from './wallet.dto';
 import { WalletService } from './wallet.service';
 import { User } from '@/common/decorator/user.decorator';
@@ -70,13 +72,14 @@ export class WalletController {
   }
 
   @Get('/callback')
-  walletCallback(@Query() query: any) {
+  walletCallback(@Query() query: any, @Res() res: Response) {
     const { tx_ref, status, transaction_id, reference } = query;
-    return this.walletService.walletCallback(
+    const redirectUrl = this.walletService.walletCallback(
       tx_ref,
       status,
       transaction_id,
       reference,
     );
+    res.redirect(redirectUrl);
   }
 }
