@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import axios, { AxiosInstance, isAxiosError } from 'axios';
+import * as twilio from 'twilio';
 
 interface SendMessageParams {
   to: string;
@@ -28,63 +28,64 @@ interface SendMessageParams {
 
 @Injectable()
 export class WhatsappService {
-  api: AxiosInstance;
+  private client: twilio.Twilio;
+  private fromNumber: string;
+
   constructor() {
-    this.api = axios.create({
-      baseURL: '  https://graph.facebook.com/v22.0/115513451410785',
-      headers: {
-        Authorization: `Bearer ${process.env.META_ACCESS_TOKEN ?? ''}`,
-      },
-    });
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    this.fromNumber = process.env.TWILIO_WHATSAPP_NUMBER || '';
+
+    this.client = twilio.default(accountSid, authToken);
   }
 
   async sendMessage({
     to,
     message,
-    actions,
     type,
     location,
-    context,
   }: SendMessageParams) {
     try {
-      const response = await this.api.post('/messages', {
-        messaging_product: 'whatsapp',
-        to,
-        type,
-        context,
-        interactive:
-          type === 'interactive'
-            ? {
-                type: 'button',
-                body: {
-                  text: message,
-                },
-                action: actions,
-              }
-            : undefined,
-        text:
-          type === 'text' ? { body: message, preview_url: true } : undefined,
+      // Format phone number for WhatsApp
+      const formattedTo = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
 
-        location:
-          type === 'location'
-            ? { latitude: location?.latitude, longitude: location?.longitude }
-            : undefined,
-      });
+      if (type === 'location' && location) {
+        // Send location message
+        const response = await this.client.messages.create({
+          from: this.fromNumber,
+          to: formattedTo,
+          body: message,
+          persistentAction: [`geo:${location.latitude},${location.longitude}`],
+        });
 
-      return {
-        status: response.status,
-        data: response.data,
-      };
-    } catch (error) {
-      if (isAxiosError(error)) {
         return {
-          status: error.response?.status,
-          error: error.response?.data,
+          status: 200,
+          data: {
+            messages: [{ id: response.sid }],
+            sid: response.sid,
+          },
+        };
+      } else {
+        // Send text message
+        const response = await this.client.messages.create({
+          from: this.fromNumber,
+          to: formattedTo,
+          body: message,
+        });
+
+        return {
+          status: 200,
+          data: {
+            messages: [{ id: response.sid }],
+            sid: response.sid,
+          },
         };
       }
+    } catch (error: any) {
+      console.error('Twilio WhatsApp Error:', error);
       return {
-        status: 400,
-        error: 'Internet Connection Error',
+        status: error.status || 400,
+        error: error.message || 'Failed to send WhatsApp message',
       };
     }
   }
