@@ -125,8 +125,19 @@ model user {
   message        message[]
   panic_actions  panic_actions[]
   notification   notification[]
+  checkout_sessions checkout_session[]
 
   @@map("users")
+}
+
+model checkout_session {
+  id        String   @id @default(cuid())
+  amount    Float
+  createdAt DateTime @default(now())
+  userId    String
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("checkout_sessions")
 }
 
 model interest {

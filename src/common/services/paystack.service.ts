@@ -1,15 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 
-/** Amount in currency subunit (kobo for NGN, cents for USD). */
+/** Amount in USD; service converts to NGN using exchange rate for Paystack. */
 export interface PaystackInitializeInput {
   email: string;
-  amount: number; // in main unit (e.g. USD 10); service converts to subunit
-  currency?: string;
+  amount: number; // amount in USD
   reference?: string;
   callback_url?: string;
   metadata?: Record<string, unknown>;
 }
+
+/** 1 USD = 1500 NGN. Paystack charges in Naira (NGN), amount in kobo. */
+const USD_TO_NGN = 1500;
+const NGN_TO_KOBO = 100;
 
 interface PaystackInitializeResponse {
   status: boolean;
@@ -51,31 +54,42 @@ export class PaystackService {
   }
 
   /**
-   * Initialize a Paystack transaction. Returns the URL to redirect the user to.
-   * Amount is in main unit (e.g. 10 for $10); converted to subunit (cents) for Paystack.
+   * Initialize a Paystack transaction in Naira (NGN).
+   * Input amount is in USD; converted to NGN at 1 USD = 1500 NGN, then to kobo for Paystack.
    */
-  async initializeTransaction(params: PaystackInitializeInput) {
-    const amountInSubunit = Math.round(params.amount * 100); // USD: cents; NGN: kobo
+  async initializeTransaction(params: PaystackInitializeInput): Promise<{
+    authorization_url: string;
+    access_code: string;
+    reference: string;
+  } | { error: string }> {
+    const amountInKobo = Math.round(params.amount * USD_TO_NGN * NGN_TO_KOBO);
     const callbackUrl =
       params.callback_url ||
       `${process.env.BASE_URL || ''}/wallet/callback`;
 
+    if (!process.env.PAYSTACK_SECRET_KEY?.trim()) {
+      return { error: 'Paystack is not configured (PAYSTACK_SECRET_KEY missing)' };
+    }
+
     try {
+      const body = {
+        email: params.email,
+        amount: amountInKobo,
+        currency: 'NGN',
+        reference: params.reference,
+        callback_url: callbackUrl,
+        metadata: params.metadata,
+      };
       const response = await this.api.post<PaystackInitializeResponse>(
         '/transaction/initialize',
-        {
-          email: params.email,
-          amount: amountInSubunit,
-          currency: params.currency || 'USD',
-          reference: params.reference,
-          callback_url: callbackUrl,
-          metadata: params.metadata,
-        },
+        body,
       );
 
       const data = response.data?.data;
       if (!response.data?.status || !data?.authorization_url) {
-        return null;
+        const msg = (response.data as any)?.message || 'Paystack returned no payment URL';
+        console.error('[Paystack] Initialize failed:', response.data);
+        return { error: msg };
       }
 
       return {
@@ -83,8 +97,14 @@ export class PaystackService {
         access_code: data.access_code,
         reference: data.reference,
       };
-    } catch {
-      return null;
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Paystack request failed';
+      const status = err?.response?.status;
+      console.error('[Paystack] Initialize error:', status, msg, err?.response?.data);
+      return { error: msg };
     }
   }
 

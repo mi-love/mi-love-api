@@ -33,6 +33,61 @@ export class WalletController {
     return this.walletService.buyCoins(walletDto, user);
   }
 
+  @Get('/checkout')
+  async getCheckoutPage(@Query('token') token: string, @Res() res: Response) {
+    if (!token) {
+      throw new BadRequestException({ message: 'Missing token' });
+    }
+    const html = await this.walletService.getCheckoutPageHtml(token);
+    if (!html) {
+      throw new BadRequestException({
+        message: 'Invalid or expired checkout link',
+      });
+    }
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  }
+
+  @Get('/redirect')
+  async redirectToProvider(
+    @Query('token') token: string,
+    @Query('provider') provider: 'paystack' | 'flutterwave',
+    @Res() res: Response,
+  ) {
+    if (!token || !provider) {
+      throw new BadRequestException({
+        message: 'Missing token or provider',
+      });
+    }
+    if (provider !== 'paystack' && provider !== 'flutterwave') {
+      throw new BadRequestException({
+        message: 'Provider must be paystack or flutterwave',
+      });
+    }
+    const redirectUrl = await this.walletService.redirectToProvider(
+      token,
+      provider,
+    );
+    if (typeof redirectUrl !== 'string' || !redirectUrl.startsWith('http')) {
+      throw new BadRequestException({
+        message: redirectUrl?.message || 'Invalid payment redirect URL',
+      });
+    }
+    res.redirect(redirectUrl);
+  }
+
+  @Get('/callback')
+  walletCallback(@Query() query: any, @Res() res: Response) {
+    const { tx_ref, status, transaction_id, reference } = query;
+    const redirectUrl = this.walletService.walletCallback(
+      tx_ref,
+      status,
+      transaction_id,
+      reference,
+    );
+    res.redirect(redirectUrl);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Get('/gifts')
   getGifts(@Query() query: PaginationParams) {
@@ -70,55 +125,5 @@ export class WalletController {
   @Post('/deduct')
   deductCoins(@Body() deductDto: DeductDto, @User() user: UserWithoutPassword) {
     return this.walletService.deductCoins(deductDto, user);
-  }
-
-  @Get('/checkout')
-  getCheckoutPage(@Query('token') token: string, @Res() res: Response) {
-    if (!token) {
-      throw new BadRequestException({ message: 'Missing token' });
-    }
-    const html = this.walletService.getCheckoutPageHtml(token);
-    if (!html) {
-      throw new BadRequestException({
-        message: 'Invalid or expired checkout link',
-      });
-    }
-    res.setHeader('Content-Type', 'text/html');
-    res.send(html);
-  }
-
-  @Get('/redirect')
-  async redirectToProvider(
-    @Query('token') token: string,
-    @Query('provider') provider: 'paystack' | 'flutterwave',
-    @Res() res: Response,
-  ) {
-    if (!token || !provider) {
-      throw new BadRequestException({
-        message: 'Missing token or provider',
-      });
-    }
-    if (provider !== 'paystack' && provider !== 'flutterwave') {
-      throw new BadRequestException({
-        message: 'Provider must be paystack or flutterwave',
-      });
-    }
-    const redirectUrl = await this.walletService.redirectToProvider(
-      token,
-      provider,
-    );
-    res.redirect(redirectUrl);
-  }
-
-  @Get('/callback')
-  walletCallback(@Query() query: any, @Res() res: Response) {
-    const { tx_ref, status, transaction_id, reference } = query;
-    const redirectUrl = this.walletService.walletCallback(
-      tx_ref,
-      status,
-      transaction_id,
-      reference,
-    );
-    res.redirect(redirectUrl);
   }
 }

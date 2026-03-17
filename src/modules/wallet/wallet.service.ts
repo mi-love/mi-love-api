@@ -1,5 +1,4 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { sendGiftDto, WalletDto, DeductDto } from './wallet.dto';
 import { UserWithoutPassword } from '@/common/types/db';
 import { DbService } from '@/database/database.service';
@@ -13,14 +12,13 @@ import {
 
 const PAYSTACK_PREFIX = 'paystack-';
 const FLUTTERWAVE_PREFIX = 'tx-';
-const CHECKOUT_TOKEN_EXPIRY = '15m';
+const CHECKOUT_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
 
 export type PaymentProviderChoice = 'paystack' | 'flutterwave';
 
 export interface CheckoutTokenPayload {
   sub: string;
   amount: number;
-  intentId: string;
   email: string;
   name: string;
 }
@@ -32,7 +30,6 @@ export class WalletService {
     private readonly pagination: PaginationUtils,
     private readonly paymentService: PaymentService,
     private readonly paystackService: PaystackService,
-    private readonly jwtService: JwtService,
   ) {}
 
   async sendGift(sendGiftBody: sendGiftDto, user: UserWithoutPassword) {
@@ -216,18 +213,13 @@ export class WalletService {
     const provider = walletDto.provider;
 
     if (!provider) {
-      const intentId = nanoid();
-      const token = this.jwtService.sign(
-        {
-          sub: user.id,
+      const session = await this.db.checkout_session.create({
+        data: {
           amount: walletDto.amount,
-          intentId,
-          email: user.email,
-          name: `${user.first_name} ${user.last_name}`.trim(),
-        } as CheckoutTokenPayload,
-        { expiresIn: CHECKOUT_TOKEN_EXPIRY },
-      );
-      const checkoutLink = `${baseUrl}/wallet/checkout?token=${token}`;
+          userId: user.id,
+        },
+      });
+      const checkoutLink = `${baseUrl}/wallet/checkout?token=${session.id}`;
       return {
         message: 'Checkout link created. Complete payment on the page.',
         link: checkoutLink,
@@ -242,15 +234,14 @@ export class WalletService {
       const paystackResult = await this.paystackService.initializeTransaction({
         email: user.email,
         amount: walletDto.amount,
-        currency: 'USD',
         reference: id,
         callback_url: callbackUrl,
         metadata: { userId: user.id },
       });
 
-      if (!paystackResult?.authorization_url) {
+      if ('error' in paystackResult) {
         throw new BadGatewayException({
-          message: 'Failed to create Paystack payment link',
+          message: paystackResult.error || 'Failed to create Paystack payment link',
         });
       }
 
@@ -318,17 +309,24 @@ export class WalletService {
     };
   }
 
-  verifyCheckoutToken(token: string): CheckoutTokenPayload | null {
-    try {
-      const payload = this.jwtService.verify<CheckoutTokenPayload>(token);
-      return payload?.sub && payload?.amount != null ? payload : null;
-    } catch {
-      return null;
-    }
+  async verifyCheckoutToken(token: string): Promise<CheckoutTokenPayload | null> {
+    const session = await this.db.checkout_session.findUnique({
+      where: { id: token },
+      include: { user: { select: { id: true, email: true, first_name: true, last_name: true } } },
+    });
+    if (!session?.user) return null;
+    const age = Date.now() - session.createdAt.getTime();
+    if (age > CHECKOUT_EXPIRY_MS) return null;
+    return {
+      sub: session.user.id,
+      amount: session.amount,
+      email: session.user.email,
+      name: `${session.user.first_name} ${session.user.last_name}`.trim(),
+    };
   }
 
-  getCheckoutPageHtml(token: string): string | null {
-    const payload = this.verifyCheckoutToken(token);
+  async getCheckoutPageHtml(token: string): Promise<string | null> {
+    const payload = await this.verifyCheckoutToken(token);
     if (!payload) return null;
     const baseUrl = process.env.BASE_URL || '';
     const paystackUrl = `${baseUrl}/wallet/redirect?token=${encodeURIComponent(token)}&provider=paystack`;
@@ -417,7 +415,7 @@ export class WalletService {
     token: string,
     provider: PaymentProviderChoice,
   ): Promise<string> {
-    const payload = this.verifyCheckoutToken(token);
+    const payload = await this.verifyCheckoutToken(token);
     if (!payload) {
       throw new BadGatewayException({ message: 'Invalid or expired checkout link' });
     }
@@ -438,14 +436,13 @@ export class WalletService {
       const result = await this.paystackService.initializeTransaction({
         email: payload.email,
         amount,
-        currency: 'USD',
         reference: id,
         callback_url: callbackUrl,
         metadata: { userId: user.id },
       });
-      if (!result?.authorization_url) {
+      if ('error' in result) {
         throw new BadGatewayException({
-          message: 'Failed to create Paystack payment link',
+          message: result.error || 'Failed to create Paystack payment link',
         });
       }
       await this.db.transaction.create({

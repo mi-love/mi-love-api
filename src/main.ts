@@ -1,10 +1,15 @@
+import { config as loadEnv } from 'dotenv';
+import * as path from 'path';
+
+// Load .env from project root before any module (so JWT_SECRET etc. are available)
+loadEnv({ path: path.resolve(process.cwd(), '.env') });
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule } from '@nestjs/swagger';
 import { DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as fs from 'fs';
-import * as path from 'path';
 
 const PORT = 9999; // temp removed port to debug why it's at 4545 even though env is set to 9999
 async function bootstrap() {

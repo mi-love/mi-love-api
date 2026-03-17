@@ -27,7 +27,7 @@ export class WsAuthGuard implements CanActivate {
 
     try {
       const payload = await this.jwtService.verifyAsync(token, {
-        secret: process.env.JWT_SECRET,
+        secret: process.env.JWT_SECRET || "secret",
       });
       const user = await this.db.user.findUnique({
         where: {
