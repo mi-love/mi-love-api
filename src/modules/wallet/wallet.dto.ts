@@ -1,10 +1,18 @@
 import { Transform } from 'class-transformer';
-import { IsNumber, IsString } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString } from 'class-validator';
+
+export type PaymentProvider = 'flutterwave' | 'paystack';
 
 export class WalletDto {
   @IsNumber()
   @Transform(({ value }) => Number(value))
   amount: number;
+
+  /** Payment provider for buying coins. Defaults to "flutterwave". */
+  @IsOptional()
+  @IsString()
+  @IsIn(['flutterwave', 'paystack'])
+  provider?: PaymentProvider;
 }
 
 export class sendGiftDto {

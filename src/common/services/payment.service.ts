@@ -66,6 +66,7 @@ export class PaymentService {
         amount: String(amount),
         currency: currency || 'USD',
         redirect_url: `${process.env.BASE_URL}/wallet/callback`,
+        payment_options: 'card, banktransfer, ussd',
         customer: {
           email,
           name,

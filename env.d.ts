@@ -12,6 +12,7 @@ declare namespace NodeJS {
     FLU_PUBLIC_KEY: string;
     FLU_SECRET_KEY: string;
     FLU_ENCRYPTION_KEY: string;
+    PAYSTACK_SECRET_KEY: string;
     EXPO_ACCESS_TOKEN: string;
     META_TOKEN_VERIFICATION_KEY: string;
     META_ACCESS_TOKEN: string;

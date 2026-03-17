@@ -1,13 +1,29 @@
 import { BadGatewayException, Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { sendGiftDto, WalletDto, DeductDto } from './wallet.dto';
 import { UserWithoutPassword } from '@/common/types/db';
 import { DbService } from '@/database/database.service';
 import { PaymentService } from '@/common/services/payment.service';
+import { PaystackService } from '@/common/services/paystack.service';
 import { nanoid } from 'nanoid';
 import {
   PaginationParams,
   PaginationUtils,
 } from '@/common/services/pagination.service';
+
+const PAYSTACK_PREFIX = 'paystack-';
+const FLUTTERWAVE_PREFIX = 'tx-';
+const CHECKOUT_TOKEN_EXPIRY = '15m';
+
+export type PaymentProviderChoice = 'paystack' | 'flutterwave';
+
+export interface CheckoutTokenPayload {
+  sub: string;
+  amount: number;
+  intentId: string;
+  email: string;
+  name: string;
+}
 
 @Injectable()
 export class WalletService {
@@ -15,6 +31,8 @@ export class WalletService {
     private readonly db: DbService,
     private readonly pagination: PaginationUtils,
     private readonly paymentService: PaymentService,
+    private readonly paystackService: PaystackService,
+    private readonly jwtService: JwtService,
   ) {}
 
   async sendGift(sendGiftBody: sendGiftDto, user: UserWithoutPassword) {
@@ -194,7 +212,73 @@ export class WalletService {
       });
     }
 
-    const id = `tx-${nanoid()}`;
+    const baseUrl = process.env.BASE_URL || '';
+    const provider = walletDto.provider;
+
+    if (!provider) {
+      const intentId = nanoid();
+      const token = this.jwtService.sign(
+        {
+          sub: user.id,
+          amount: walletDto.amount,
+          intentId,
+          email: user.email,
+          name: `${user.first_name} ${user.last_name}`.trim(),
+        } as CheckoutTokenPayload,
+        { expiresIn: CHECKOUT_TOKEN_EXPIRY },
+      );
+      const checkoutLink = `${baseUrl}/wallet/checkout?token=${token}`;
+      return {
+        message: 'Checkout link created. Complete payment on the page.',
+        link: checkoutLink,
+        amount: walletDto.amount,
+      };
+    }
+
+    const callbackUrl = `${baseUrl}/wallet/callback`;
+
+    if (provider === 'paystack') {
+      const id = `${PAYSTACK_PREFIX}${nanoid()}`;
+      const paystackResult = await this.paystackService.initializeTransaction({
+        email: user.email,
+        amount: walletDto.amount,
+        currency: 'USD',
+        reference: id,
+        callback_url: callbackUrl,
+        metadata: { userId: user.id },
+      });
+
+      if (!paystackResult?.authorization_url) {
+        throw new BadGatewayException({
+          message: 'Failed to create Paystack payment link',
+        });
+      }
+
+      await this.db.transaction.create({
+        data: {
+          id,
+          amount: walletDto.amount,
+          type: 'credit',
+          currency: 'USD',
+          status: 'pending',
+          payment_link: paystackResult.authorization_url,
+          description: 'Purchase of coins (Paystack)',
+          user: {
+            connect: {
+              id: user.id,
+            },
+          },
+        },
+      });
+
+      return {
+        message: 'Payment link created successfully',
+        link: paystackResult.authorization_url,
+        provider: 'paystack',
+      };
+    }
+
+    const id = `${FLUTTERWAVE_PREFIX}${nanoid()}`;
     const payment = await this.paymentService.createPaymentLink({
       amount: walletDto.amount,
       email: user.email,
@@ -230,7 +314,182 @@ export class WalletService {
     return {
       message: 'Payment link created successfully',
       link: payment.data.link,
+      provider: 'flutterwave',
     };
+  }
+
+  verifyCheckoutToken(token: string): CheckoutTokenPayload | null {
+    try {
+      const payload = this.jwtService.verify<CheckoutTokenPayload>(token);
+      return payload?.sub && payload?.amount != null ? payload : null;
+    } catch {
+      return null;
+    }
+  }
+
+  getCheckoutPageHtml(token: string): string | null {
+    const payload = this.verifyCheckoutToken(token);
+    if (!payload) return null;
+    const baseUrl = process.env.BASE_URL || '';
+    const paystackUrl = `${baseUrl}/wallet/redirect?token=${encodeURIComponent(token)}&provider=paystack`;
+    const flutterwaveUrl = `${baseUrl}/wallet/redirect?token=${encodeURIComponent(token)}&provider=flutterwave`;
+    const amount = Number(payload.amount);
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mi-Love — Pay for coins</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(160deg, #fef2f7 0%, #fff 50%);
+      color: #1a1a1a;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      padding: 32px;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 { font-size: 1.5rem; margin: 0 0 8px; color: #1a1a1a; }
+    .amount {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #d41372;
+      margin-bottom: 24px;
+    }
+    p { color: #666; margin: 0 0 24px; font-size: 0.95rem; line-height: 1.5; }
+    .buttons { display: flex; flex-direction: column; gap: 12px; }
+    a {
+      display: block;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      text-align: center;
+      font-size: 1rem;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    a:active { transform: scale(0.98); }
+    .btn-paystack {
+      background: #00c3f7;
+      color: #fff;
+      box-shadow: 0 2px 12px rgba(0,195,247,0.35);
+    }
+    .btn-paystack:hover { box-shadow: 0 4px 16px rgba(0,195,247,0.45); }
+    .btn-flutterwave {
+      background: #f5a623;
+      color: #1a1a1a;
+      box-shadow: 0 2px 12px rgba(245,166,35,0.35);
+    }
+    .btn-flutterwave:hover { box-shadow: 0 4px 16px rgba(245,166,35,0.45); }
+    .note { font-size: 0.8rem; color: #999; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Purchase coins</h1>
+    <div class="amount">$${amount.toFixed(2)} USD</div>
+    <p>Choose how you’d like to pay. You’ll be redirected to a secure payment page.</p>
+    <div class="buttons">
+      <a href="${paystackUrl}" class="btn-paystack">Pay with Paystack</a>
+      <a href="${flutterwaveUrl}" class="btn-flutterwave">Pay with Flutterwave (card, bank transfer, USSD)</a>
+    </div>
+    <p class="note">Flutterwave supports card, bank transfer, and USSD.</p>
+  </div>
+</body>
+</html>`;
+  }
+
+  async redirectToProvider(
+    token: string,
+    provider: PaymentProviderChoice,
+  ): Promise<string> {
+    const payload = this.verifyCheckoutToken(token);
+    if (!payload) {
+      throw new BadGatewayException({ message: 'Invalid or expired checkout link' });
+    }
+
+    const user = await this.db.user.findUnique({
+      where: { id: payload.sub },
+      include: { wallet: true },
+    });
+    if (!user) {
+      throw new BadGatewayException({ message: 'User not found' });
+    }
+
+    const callbackUrl = `${process.env.BASE_URL || ''}/wallet/callback`;
+    const { amount } = payload;
+
+    if (provider === 'paystack') {
+      const id = `${PAYSTACK_PREFIX}${nanoid()}`;
+      const result = await this.paystackService.initializeTransaction({
+        email: payload.email,
+        amount,
+        currency: 'USD',
+        reference: id,
+        callback_url: callbackUrl,
+        metadata: { userId: user.id },
+      });
+      if (!result?.authorization_url) {
+        throw new BadGatewayException({
+          message: 'Failed to create Paystack payment link',
+        });
+      }
+      await this.db.transaction.create({
+        data: {
+          id,
+          amount,
+          type: 'credit',
+          currency: 'USD',
+          status: 'pending',
+          payment_link: result.authorization_url,
+          description: 'Purchase of coins (Paystack)',
+          user: { connect: { id: user.id } },
+        },
+      });
+      return result.authorization_url;
+    }
+
+    const id = `${FLUTTERWAVE_PREFIX}${nanoid()}`;
+    const payment = await this.paymentService.createPaymentLink({
+      amount,
+      email: payload.email,
+      name: payload.name,
+      phonenumber: user.phone_number ?? '',
+      tx_ref: id,
+      currency: 'USD',
+    });
+    if (!payment?.data?.link) {
+      throw new BadGatewayException({
+        message: 'Failed to create Flutterwave payment link',
+      });
+    }
+    await this.db.transaction.create({
+      data: {
+        id,
+        amount,
+        type: 'credit',
+        currency: 'USD',
+        status: 'pending',
+        payment_link: payment.data.link,
+        description: 'Purchase of coins (Flutterwave)',
+        user: { connect: { id: user.id } },
+      },
+    });
+    return payment.data.link;
   }
 
   async walletCallback(
@@ -239,14 +498,16 @@ export class WalletService {
     transaction_id?: string,
     reference?: string,
   ) {
-    if (!tx_ref) {
+    const ref = reference || tx_ref;
+    if (!ref) {
       throw new BadGatewayException({
         message: 'Invalid transaction',
       });
     }
+
     const transactionDetails = await this.db.transaction.findUnique({
       where: {
-        id: tx_ref,
+        id: ref,
         status: {
           not: 'success',
         },
@@ -258,16 +519,13 @@ export class WalletService {
       });
     }
 
-    // if (statusQuery !== 'successful') {
-    //   throw new BadGatewayException({
-    //     message: 'Payment was not successful',
-    //   });
-    // }
-
-    const isPaymentSuccessful = await this.paymentService.verifyPayment(tx_ref);
+    const isPaystack = ref.startsWith(PAYSTACK_PREFIX);
+    const isPaymentSuccessful = isPaystack
+      ? await this.paystackService.verifyTransaction(ref)
+      : await this.paymentService.verifyPayment(ref);
     if (isPaymentSuccessful) {
       await this.db.transaction.update({
-        where: { id: tx_ref },
+        where: { id: ref },
         data: {
           status: 'success',
         },
@@ -290,7 +548,7 @@ export class WalletService {
       });
 
       console.log('Redirecting to transaction detail');
-      return `milove://payment-callback?status=successful&transaction_id=${transaction_id || tx_ref}&reference=${reference || tx_ref}`;
+      return `milove://payment-callback?status=successful&transaction_id=${transaction_id || ref}&reference=${ref}`;
       // return {
       //   message: 'Payment successful',
       //   status: 'success',
@@ -304,7 +562,7 @@ export class WalletService {
       },
     });
 
-    return `milove://payment-callback?status=failed&reference=${reference || tx_ref}`;
+    return `milove://payment-callback?status=failed&reference=${reference || ref}`;
   }
 
   async getTransactions(user: UserWithoutPassword, query: PaginationParams) {

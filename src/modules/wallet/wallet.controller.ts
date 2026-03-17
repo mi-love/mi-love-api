@@ -7,6 +7,7 @@ import {
   UseGuards,
   Param,
   Res,
+  BadRequestException,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { sendGiftDto, WalletDto, DeductDto } from './wallet.dto';
@@ -69,6 +70,44 @@ export class WalletController {
   @Post('/deduct')
   deductCoins(@Body() deductDto: DeductDto, @User() user: UserWithoutPassword) {
     return this.walletService.deductCoins(deductDto, user);
+  }
+
+  @Get('/checkout')
+  getCheckoutPage(@Query('token') token: string, @Res() res: Response) {
+    if (!token) {
+      throw new BadRequestException({ message: 'Missing token' });
+    }
+    const html = this.walletService.getCheckoutPageHtml(token);
+    if (!html) {
+      throw new BadRequestException({
+        message: 'Invalid or expired checkout link',
+      });
+    }
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  }
+
+  @Get('/redirect')
+  async redirectToProvider(
+    @Query('token') token: string,
+    @Query('provider') provider: 'paystack' | 'flutterwave',
+    @Res() res: Response,
+  ) {
+    if (!token || !provider) {
+      throw new BadRequestException({
+        message: 'Missing token or provider',
+      });
+    }
+    if (provider !== 'paystack' && provider !== 'flutterwave') {
+      throw new BadRequestException({
+        message: 'Provider must be paystack or flutterwave',
+      });
+    }
+    const redirectUrl = await this.walletService.redirectToProvider(
+      token,
+      provider,
+    );
+    res.redirect(redirectUrl);
   }
 
   @Get('/callback')
