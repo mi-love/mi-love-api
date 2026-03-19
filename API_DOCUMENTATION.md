@@ -1,7 +1,8 @@
 # Mi-Love API — Full API Documentation
 
 **Base URL:** `http://localhost:9999` (or your deployed URL)  
-**API docs (Swagger):** `http://localhost:9999/docs`
+**API docs (Swagger):** `http://localhost:9999/docs`  
+**WebSockets & push:** [SOCKET_AND_PUSH_API.md](SOCKET_AND_PUSH_API.md)
 
 Authentication for protected routes: send a valid JWT in the `Authorization` header:
 
@@ -24,6 +25,8 @@ Authorization: Bearer <access_token>
 9. [Notifications](#9-notifications)
 10. [Emergencies](#10-emergencies)
 11. [Streams](#11-streams)
+
+**WebSockets, Expo push & full route index:** [SOCKET_AND_PUSH_API.md](SOCKET_AND_PUSH_API.md)
 
 ---
 
@@ -746,7 +749,7 @@ List friends with filters and pagination.
 | Field       | Type   | Description                        |
 | ----------- | ------ | ---------------------------------- |
 | filterValue | string | Search value                        |
-| filterBy    | string | `"blocked"` \| `"friends"` \| `"explore"` |
+| filterBy    | string | `"blocked"` \| `"friends"` \| `"explore"` — explore lists **all** other users (not only non-friends); each user includes `isFriend`, and the response includes `hasFriends` |
 | limit       | number | Page size                           |
 | page        | number | Page number                         |
 | order       | string | `"desc"` \| `"asc"`                 |
@@ -779,7 +782,31 @@ List friends with filters and pagination.
 ```
 
 **Response (200) — when filterBy=blocked:** `{ "message": "Blocked Users", "data": [...], "meta": {...} }`  
-**Response (200) — when filterBy=explore:** `{ "message": "Explore Users", "data": [...], "meta": {...} }`
+**Response (200) — when filterBy=explore:** All users except the authenticated user. Each item includes `isFriend` (whether they are in your friends list). `hasFriends` is `true` if you have at least one friend.
+
+```json
+{
+  "message": "Explore Users",
+  "data": [
+    {
+      "id": "clxx...",
+      "email": "user@example.com",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "username": "janedoe",
+      "isFriend": false,
+      "profile_picture": { "url": "https://...", "provider": "cloudinary" }
+    }
+  ],
+  "hasFriends": true,
+  "meta": {
+    "totalPages": 5,
+    "currentPage": 1,
+    "itemsPerPage": 20,
+    "totalItems": 100
+  }
+}
+```
 
 ---
 
@@ -1485,6 +1512,8 @@ Upload files (images) to Cloudinary. Max 5 files per request.
 **Prefix:** `/notifications`  
 **Auth required:** Yes (JWT)
 
+Notifications are **stored in the database** when the server sends them (for example after a new chat message). The list is ordered **newest first**. For **Socket.IO** events, **Expo push** registration (`POST /profile/save-fcm`), and the **full HTTP route index**, see **[SOCKET_AND_PUSH_API.md](SOCKET_AND_PUSH_API.md)**.
+
 ### GET `/notifications`
 
 Get current user's notifications (paginated).
@@ -1644,4 +1673,4 @@ Response meta often includes:
 
 ---
 
-*Generated from Mi-Love API backend. For interactive docs, use Swagger at `/docs`.*
+*Generated from Mi-Love API backend. For interactive docs, use Swagger at `/docs`. WebSockets, Expo push, and the full HTTP route index: [SOCKET_AND_PUSH_API.md](SOCKET_AND_PUSH_API.md).*

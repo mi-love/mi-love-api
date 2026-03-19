@@ -94,32 +94,20 @@ export class FriendsService {
         id: {
           not: userId,
         },
-        my_friends: {
-          none: {
-            id: userId,
-          },
-        },
-        // blocked_users: {}
       };
+      const me = await this.db.user.findUnique({
+        where: { id: userId },
+        select: {
+          my_friends: { select: { id: true } },
+        },
+      });
+      const friendIds = new Set(me?.my_friends.map((f) => f.id) ?? []);
+      const hasFriends = friendIds.size > 0;
+
       const all = await this.db.user.count({ where });
-      const friends = await this.db.user.findMany({
+      const users = await this.db.user.findMany({
         where,
         include: {
-          my_friends: {
-            select: {
-              email: true,
-              id: true,
-              first_name: true,
-              last_name: true,
-              username: true,
-              profile_picture: {
-                select: {
-                  url: true,
-                  provider: true,
-                },
-              },
-            },
-          },
           profile_picture: true,
         },
         skip,
@@ -133,9 +121,15 @@ export class FriendsService {
         },
       });
 
+      const data = users.map((u) => ({
+        ...u,
+        isFriend: friendIds.has(u.id),
+      }));
+
       return {
         message: 'Explore Users',
-        data: friends,
+        data,
+        hasFriends,
         meta: this.pagination.getMeta({
           totalItems: all,
           limit,

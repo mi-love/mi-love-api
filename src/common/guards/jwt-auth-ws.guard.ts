@@ -18,7 +18,6 @@ export class WsAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const client: Socket = context.switchToWs().getClient();
     const token = this.extractTokenFromHeader(client);
-    console.log(token);
     if (!token) {
       throw new UnauthorizedException({
         message: 'Token not found',
