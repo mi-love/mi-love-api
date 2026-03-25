@@ -2,7 +2,7 @@
 
 **Base URL:** `http://localhost:9999` (or your deployed URL)  
 **API docs (Swagger):** `http://localhost:9999/docs`  
-**WebSockets & push:** [SOCKET_AND_PUSH_API.md](SOCKET_AND_PUSH_API.md)
+**Socket.IO:** [SOCKET_API.md](SOCKET_API.md) · **Push & route index:** [SOCKET_AND_PUSH_API.md](SOCKET_AND_PUSH_API.md)
 
 Authentication for protected routes: send a valid JWT in the `Authorization` header:
 
@@ -26,7 +26,7 @@ Authorization: Bearer <access_token>
 10. [Emergencies](#10-emergencies)
 11. [Streams](#11-streams)
 
-**WebSockets, Expo push & full route index:** [SOCKET_AND_PUSH_API.md](SOCKET_AND_PUSH_API.md)
+**Socket.IO:** [SOCKET_API.md](SOCKET_API.md) · **Expo push & full route index:** [SOCKET_AND_PUSH_API.md](SOCKET_AND_PUSH_API.md)
 
 ---
 
@@ -1512,7 +1512,7 @@ Upload files (images) to Cloudinary. Max 5 files per request.
 **Prefix:** `/notifications`  
 **Auth required:** Yes (JWT)
 
-Notifications are **stored in the database** when the server sends them (for example after a new chat message). The list is ordered **newest first**. For **Socket.IO** events, **Expo push** registration (`POST /profile/save-fcm`), and the **full HTTP route index**, see **[SOCKET_AND_PUSH_API.md](SOCKET_AND_PUSH_API.md)**.
+Notifications are **stored in the database** when the server sends them (for example after a new chat message). The list is ordered **newest first**. For **Socket.IO** (namespace `/chat`, events, logging), see **[SOCKET_API.md](SOCKET_API.md)**. For **Expo push** (`POST /profile/save-fcm`) and the **full HTTP route index**, see **[SOCKET_AND_PUSH_API.md](SOCKET_AND_PUSH_API.md)**.
 
 ### GET `/notifications`
 
@@ -1673,4 +1673,4 @@ Response meta often includes:
 
 ---
 
-*Generated from Mi-Love API backend. For interactive docs, use Swagger at `/docs`. WebSockets, Expo push, and the full HTTP route index: [SOCKET_AND_PUSH_API.md](SOCKET_AND_PUSH_API.md).*
+*Generated from Mi-Love API backend. For interactive docs, use Swagger at `/docs`. Socket.IO: [SOCKET_API.md](SOCKET_API.md). Expo push and HTTP route index: [SOCKET_AND_PUSH_API.md](SOCKET_AND_PUSH_API.md).*

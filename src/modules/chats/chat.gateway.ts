@@ -40,6 +40,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const token = this.extractTokenFromHeader(client);
 
       if (!token) {
+        this.logger.warn(`Socket ${client.id}: connect rejected (no Bearer token)`);
         client.disconnect();
         return;
       }
@@ -60,6 +61,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (user) {
         this.users.set(user.id, client.id);
         this.logger.log(`Connected client: ${client.id}, user: ${user.email}`);
+        this.attachSocketRequestLogging(client, user.id);
         return;
       }
       throw new BadGatewayException({ message: 'User not found' });
@@ -364,5 +366,28 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const [type, token] =
       client.handshake.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
+  }
+
+  /** Logs every inbound event from this socket (event name + payload preview). */
+  private attachSocketRequestLogging(client: Socket, userId: string): void {
+    client.onAny((eventName: string, ...args: unknown[]) => {
+      const payload = this.formatSocketArgsForLog(args);
+      this.logger.log(
+        `[socket in] id=${client.id} userId=${userId} event=${eventName} payload=${payload}`,
+      );
+    });
+  }
+
+  private formatSocketArgsForLog(args: unknown[]): string {
+    if (args.length === 0) {
+      return '∅';
+    }
+    try {
+      const raw = JSON.stringify(args);
+      const max = 800;
+      return raw.length > max ? `${raw.slice(0, max)}…` : raw;
+    } catch {
+      return '[unserializable]';
+    }
   }
 }
