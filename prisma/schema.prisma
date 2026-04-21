@@ -69,6 +69,65 @@ enum notification_type {
   social
 }
 
+enum user_account_status {
+  active
+  suspended
+  banned
+  deleted
+}
+
+enum verification_status {
+  pending
+  approved
+  rejected
+}
+
+enum verification_type {
+  bvn
+  nin
+  passport
+  drivers_license
+  national_id
+}
+
+enum admin_role {
+  super_admin
+  moderator
+  finance
+}
+
+enum subscription_status {
+  pending
+  active
+  expired
+  canceled
+}
+
+enum refund_status {
+  pending
+  processing
+  completed
+  failed
+  rejected
+}
+
+enum notification_channel {
+  in_app
+  email
+  sms
+}
+
+enum notification_target {
+  all
+  segment
+  user
+}
+
+enum report_type {
+  csv
+  pdf
+}
+
 model blocked_users {
   id String @id @default(cuid())
 
@@ -98,6 +157,17 @@ model user {
   country           String?
   gender            gender?
   date_of_birth     DateTime?
+  is_admin          Boolean    @default(false)
+  admin_role        admin_role?
+  account_status    user_account_status @default(active)
+  is_verified       Boolean    @default(false)
+  is_flagged        Boolean    @default(false)
+  is_deleted        Boolean    @default(false)
+  banned_at         DateTime?
+  suspended_at      DateTime?
+  deleted_at        DateTime?
+  deleted_reason    String?
+  last_login_at     DateTime?
 
   fcm_token String? @db.Text
 
@@ -126,6 +196,16 @@ model user {
   panic_actions  panic_actions[]
   notification   notification[]
   checkout_sessions checkout_session[]
+  profile        profile?
+  verifications  verification[]
+  sessions       session[]
+  devices        device[]
+  linked_accounts_as_source user_link[] @relation("source_user")
+  linked_accounts_as_target user_link[] @relation("target_user")
+  subscriptions  subscription[]
+  refunds_requested refund[] @relation("refund_requested_by")
+  admin_logs     admin_action_log[] @relation("admin_actor")
+  notification_logs notification_log[] @relation("notification_recipient")
 
   @@map("users")
 }
@@ -257,13 +337,188 @@ model transaction {
   status       status_type      @default(pending)
   currency     currency
   payment_link String?
+  provider_ref String?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   userId     String
   user       user     @relation(fields: [userId], references: [id])
+  refunds    refund[]
 
   @@map("transactions")
+}
+
+model profile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio         String?  @db.Text
+  photos      Json?
+  preferences Json?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@map("profiles")
+}
+
+model verification {
+  id           String              @id @default(cuid())
+  userId       String
+  user         user                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         verification_type
+  status       verification_status @default(pending)
+  document_url String?
+  metadata     Json?
+  reason       String?
+  reviewed_by  String?
+  reviewed_at  DateTime?
+  created_at   DateTime            @default(now())
+  updated_at   DateTime            @updatedAt
+
+  @@index([status])
+  @@index([userId])
+  @@map("verifications")
+}
+
+model session {
+  id         String   @id @default(cuid())
+  userId     String
+  user       user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token_hash String
+  ip_address String?
+  user_agent String?
+  expires_at DateTime
+  revoked_at DateTime?
+  last_seen_at DateTime?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model device {
+  id         String   @id @default(cuid())
+  userId     String
+  user       user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  device_id  String
+  platform   String?
+  os_version String?
+  app_version String?
+  ip_address String?
+  last_seen_at DateTime?
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([userId, device_id])
+  @@index([userId])
+  @@map("devices")
+}
+
+model user_link {
+  id             String   @id @default(cuid())
+  sourceUserId   String
+  targetUserId   String
+  source_user    user     @relation("source_user", fields: [sourceUserId], references: [id], onDelete: Cascade)
+  target_user    user     @relation("target_user", fields: [targetUserId], references: [id], onDelete: Cascade)
+  reason         String?
+  confidence_score Float?
+  created_by     String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  @@unique([sourceUserId, targetUserId])
+  @@index([sourceUserId])
+  @@index([targetUserId])
+  @@map("user_links")
+}
+
+model admin_action_log {
+  id         String   @id @default(cuid())
+  adminId    String?
+  admin      user?    @relation("admin_actor", fields: [adminId], references: [id], onDelete: SetNull)
+  action     String
+  resource   String
+  resource_id String?
+  metadata   Json?
+  created_at DateTime @default(now())
+
+  @@index([adminId])
+  @@index([resource])
+  @@map("admin_action_logs")
+}
+
+model subscription {
+  id          String              @id @default(cuid())
+  userId      String
+  user        user                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan_name   String
+  amount      Decimal             @db.Decimal(10, 2)
+  status      subscription_status @default(pending)
+  start_at    DateTime?
+  end_at      DateTime?
+  auto_renew  Boolean             @default(false)
+  provider_ref String?
+  created_at  DateTime            @default(now())
+  updated_at  DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model refund {
+  id            String        @id @default(cuid())
+  transactionId String
+  transaction   transaction   @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  requesterId   String?
+  requester     user?         @relation("refund_requested_by", fields: [requesterId], references: [id], onDelete: SetNull)
+  amount        Float
+  reason        String?
+  status        refund_status @default(pending)
+  processed_at  DateTime?
+  failure_reason String?
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+
+  @@index([transactionId])
+  @@index([status])
+  @@map("refunds")
+}
+
+model notification_template {
+  id         String               @id @default(cuid())
+  name       String               @unique
+  channel    notification_channel
+  title      String
+  body       String               @db.Text
+  variables  Json?
+  is_active  Boolean              @default(true)
+  created_at DateTime             @default(now())
+  updated_at DateTime             @updatedAt
+  logs       notification_log[]
+
+  @@map("notification_templates")
+}
+
+model notification_log {
+  id          String               @id @default(cuid())
+  templateId  String?
+  template    notification_template? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  userId      String?
+  user        user?                @relation("notification_recipient", fields: [userId], references: [id], onDelete: SetNull)
+  channel     notification_channel
+  target      notification_target
+  status      status_type          @default(pending)
+  message     String?              @db.Text
+  variables   Json?
+  error_message String?
+  sent_at     DateTime?
+  created_at  DateTime             @default(now())
+
+  @@index([channel])
+  @@index([status])
+  @@map("notification_logs")
 }
 
 model gift_category {

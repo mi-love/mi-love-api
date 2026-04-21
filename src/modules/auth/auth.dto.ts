@@ -7,6 +7,7 @@ import {
   IsEnum,
   IsJWT,
   IsNotEmpty,
+  IsOptional,
   IsString,
 } from 'class-validator';
 
@@ -117,4 +118,26 @@ export class SignupDto extends LoginDto {
   @IsDateString()
   @IsNotEmpty()
   date_of_birth: string;
+}
+
+export class CreateAdminUserDto extends LoginDto {
+  @IsString()
+  @IsNotEmpty()
+  first_name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  last_name: string;
+
+  @IsString()
+  @IsNotEmpty()
+  username: string;
+
+  @IsString()
+  @IsOptional()
+  country?: string;
+
+  @IsString()
+  @IsOptional()
+  phone_number?: string;
 }

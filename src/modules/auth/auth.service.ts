@@ -4,14 +4,23 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import { randomUUID } from 'crypto';
 import { DbService } from '@/database/database.service';
 import { JwtService } from '@nestjs/jwt';
 import { GoogleUser } from '@/common/types/o-auth-user';
-import { SignupDto } from './auth.dto';
-import { gender } from '@prisma/client';
+import { CreateAdminUserDto, SignupDto } from './auth.dto';
+import { admin_role, gender } from '@prisma/client';
 import { MailService } from '@/common/services/mail.service';
 import { InterestService } from '@/common/services/interest.service';
 import otpGenerator from 'otp-generator';
+
+const authUserSelect = {
+  id: true,
+  email: true,
+  password: true,
+  auth_provider: true,
+};
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -22,9 +31,40 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
-    const user = await this.db.user.findUnique({
-      where: { email },
-    });
+    let user:
+      | { id: string; email: string; password: string | null; auth_provider: string }
+      | null = null;
+
+    try {
+      const prismaUser = await this.db.user.findUnique({
+        where: { email },
+        select: authUserSelect,
+      });
+
+      user = prismaUser
+        ? {
+            id: prismaUser.id,
+            email: prismaUser.email,
+            password: prismaUser.password,
+            auth_provider: String(prismaUser.auth_provider),
+          }
+        : null;
+    } catch {
+      const rows = await this.db.$queryRaw<
+        Array<{
+          id: string;
+          email: string;
+          password: string | null;
+          auth_provider: string;
+        }>
+      >`
+        SELECT "id", "email", "password", "auth_provider"
+        FROM "users"
+        WHERE "email" = ${email}
+        LIMIT 1
+      `;
+      user = rows?.[0] || null;
+    }
 
     if (!user) {
       throw new NotFoundException({
@@ -51,17 +91,25 @@ export class AuthService {
   }
 
   async checkUserExists(email: string) {
-    const user = await this.db.user.findUnique({
-      where: { email },
-    });
-    return !!user;
+    const rows = await this.db.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "users"
+      WHERE "email" = ${email}
+      LIMIT 1
+    `;
+
+    return rows.length > 0;
   }
 
   async checkUsernameExists(username: string) {
-    const user = await this.db.user.findUnique({
-      where: { username },
-    });
-    return !!user;
+    const rows = await this.db.$queryRaw<Array<{ id: string }>>`
+      SELECT "id"
+      FROM "users"
+      WHERE "username" = ${username}
+      LIMIT 1
+    `;
+
+    return rows.length > 0;
   }
 
   async verifyOneTimeToken(token: string) {
@@ -156,6 +204,115 @@ export class AuthService {
     return this.login({
       id: user.id,
     });
+  }
+
+  async createAdminUser(data: CreateAdminUserDto) {
+    const existingUser = await this.checkUserExists(data.email);
+    if (existingUser) {
+      throw new BadRequestException({
+        message: 'User with this email already exists',
+      });
+    }
+
+    const existingUsername = await this.checkUsernameExists(data.username);
+    if (existingUsername) {
+      throw new BadRequestException({
+        message: 'Username already exists',
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    let user: { id: string; email: string; username: string };
+
+    try {
+      user = await this.db.user.create({
+        data: {
+          email: data.email,
+          password: hashedPassword,
+          first_name: data.first_name,
+          last_name: data.last_name,
+          username: data.username,
+          country: data.country,
+          phone_number: data.phone_number,
+          auth_provider: 'local',
+          is_admin: true,
+          admin_role: admin_role.super_admin,
+          wallet: {
+            create: {
+              balance: 0,
+            },
+          },
+        },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+        },
+      });
+    } catch {
+      // Fallback for databases that do not yet have admin columns.
+      const wallet = await this.db.wallet.create({
+        data: { balance: 0 },
+        select: { id: true },
+      });
+
+      const userId = randomUUID();
+      const inserted = await this.db.$queryRaw<
+        Array<{ id: string; email: string; username: string }>
+      >`
+        INSERT INTO "users" (
+          "id",
+          "email",
+          "first_name",
+          "last_name",
+          "username",
+          "password",
+          "country",
+          "phone_number",
+          "auth_provider",
+          "walletId",
+          "created_at",
+          "updated_at"
+        )
+        VALUES (
+          ${userId},
+          ${data.email},
+          ${data.first_name},
+          ${data.last_name},
+          ${data.username},
+          ${hashedPassword},
+          ${data.country || null},
+          ${data.phone_number || null},
+          'local',
+          ${wallet.id},
+          NOW(),
+          NOW()
+        )
+        RETURNING "id", "email", "username"
+      `;
+
+      if (!inserted?.[0]) {
+        throw new BadRequestException({
+          message: 'Unable to create admin user',
+        });
+      }
+
+      user = inserted[0];
+    }
+
+    const token = await this.login({
+      id: user.id,
+      email: user.email,
+      is_admin: true,
+      admin_role: admin_role.super_admin,
+    });
+
+    return {
+      message: 'Admin user created successfully',
+      user,
+      ...token,
+    };
   }
 
   // async editUser(userId: string, editUserDto: Partial<SignupDto>) {
@@ -257,6 +414,7 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.db.user.findUnique({
       where: { email },
+      select: { id: true },
     });
     if (!user) {
       throw new NotFoundException({
@@ -293,6 +451,7 @@ export class AuthService {
 
     const user = await this.db.user.findUnique({
       where: { email },
+      select: { id: true },
     });
 
     if (!user) {
@@ -367,13 +526,26 @@ export class AuthService {
     };
   }
 
-  async login(user: { id: string }) {
-    const payload = { sub: user.id };
-    return {
-      access_token: this.jwtService.sign(payload, {
-        secret: process.env.JWT_SECRET,
-      }),
+  async login(user: {
+    id: string;
+    is_admin?: boolean;
+    admin_role?: string;
+    email?: string;
+  }) {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      is_admin: Boolean(user.is_admin),
+      admin_role: user.admin_role,
     };
+    return {
+      access_token: this.jwtService.sign(payload),
+    };
+  }
+
+  async logout(userId: string) {
+    await this.db.session.deleteMany({ where: { userId } });
+    return { message: 'Logged out successfully' };
   }
 
   async googleLogin(profile: GoogleUser) {
@@ -381,6 +553,7 @@ export class AuthService {
       where: {
         email: profile.email,
       },
+      select: { id: true },
     });
 
     if (!user) {
@@ -410,6 +583,7 @@ export class AuthService {
       where: {
         email: profile.email,
       },
+      select: { id: true },
     });
 
     if (!user) {

@@ -12,8 +12,12 @@ import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
 import { GoogleUser } from '@/common/types/o-auth-user';
+import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
+import { User } from '@/common/decorator/user.decorator';
 import {
+  CreateAdminUserDto,
   ForgotPasswordDto,
+  LoginDto,
   ResetPasswordDto,
   SendOtpDto,
   SignupDto,
@@ -25,7 +29,7 @@ export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('login')
-  async login(@Body() loginDto: { email: string; password: string }) {
+  async login(@Body() loginDto: LoginDto) {
     const user = await this.authService.validateUser(
       loginDto.email,
       loginDto.password,
@@ -34,6 +38,26 @@ export class AuthController {
     return this.authService.login({
       id: user.id,
     });
+  }
+
+  @Post('admin/login')
+  async adminLogin(@Body() loginDto: LoginDto) {
+    const user = await this.authService.validateUser(
+      loginDto.email,
+      loginDto.password,
+    );
+
+    return this.authService.login({
+      id: user.id,
+      email: user.email,
+      is_admin: true,
+      admin_role: 'super_admin',
+    });
+  }
+
+  @Post('admin/create-user')
+  async createAdminUser(@Body() data: CreateAdminUserDto) {
+    return this.authService.createAdminUser(data);
   }
 
   @Post('signup')
@@ -98,5 +122,42 @@ export class AuthController {
     res.redirect(
       `${process.env.EXPO_SCHEME}/auth/login?token=${result.access_token}`,
     );
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  async logout(@User() user: any) {
+    return this.authService.logout(user.id);
+  }
+}
+
+@Controller('admin/auth')
+export class AdminAuthController {
+  constructor(private authService: AuthService) {}
+
+  @Post('login')
+  async login(@Body() loginDto: LoginDto) {
+    const user = await this.authService.validateUser(
+      loginDto.email,
+      loginDto.password,
+    );
+
+    return this.authService.login({
+      id: user.id,
+      email: user.email,
+      is_admin: true,
+      admin_role: 'super_admin',
+    });
+  }
+
+  @Post('create-user')
+  async createAdminUser(@Body() data: CreateAdminUserDto) {
+    return this.authService.createAdminUser(data);
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  async adminLogout(@User() user: any) {
+    return this.authService.logout(user.id);
   }
 }

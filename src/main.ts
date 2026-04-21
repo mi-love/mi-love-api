@@ -10,6 +10,8 @@ import { SwaggerModule } from '@nestjs/swagger';
 import { DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import * as fs from 'fs';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { LoggerService } from './common/services/logger.service';
 
 const PORT = 9999; // temp removed port to debug why it's at 4545 even though env is set to 9999
 async function bootstrap() {
@@ -18,6 +20,9 @@ async function bootstrap() {
   if (!fs.existsSync(uploadPath)) {
     fs.mkdirSync(uploadPath);
   }
+
+  // Initialize logger service
+  const loggerService = app.get(LoggerService);
 
   // swagger does setup
   const config = new DocumentBuilder()
@@ -30,6 +35,7 @@ async function bootstrap() {
   SwaggerModule.setup('docs', app, documentFactory);
 
   app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalFilters(new GlobalExceptionFilter(loggerService));
   if (process.env.NODE_ENV === 'development') app.enableCors();
   await app.listen(PORT, () => {
     console.log(`😉 Server is running on port http://localhost:${PORT}`);

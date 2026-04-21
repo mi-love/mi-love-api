@@ -125,39 +125,79 @@ export class ProfileService {
       });
     }
 
-    const safeEdit = (d: string) => {
-      return d?.trim() || undefined;
+    const hasField = (field: keyof EditProfileDto) => {
+      return Object.prototype.hasOwnProperty.call(editProfileDto, field);
     };
+
+    const safeEdit = (value?: string) => {
+      const trimmed = value?.trim();
+      return trimmed ? trimmed : undefined;
+    };
+
+    const updateData: Record<string, unknown> = {
+      interests:
+        removedInterests?.length > 0
+          ? {
+              disconnect: removedInterests.map((interest) => {
+                return {
+                  name: interest,
+                };
+              }),
+            }
+          : undefined,
+    };
+
+    if (hasField('first_name')) {
+      updateData.first_name = safeEdit(editProfileDto.first_name);
+    }
+
+    if (hasField('last_name')) {
+      updateData.last_name = safeEdit(editProfileDto.last_name);
+    }
+
+    if (hasField('username')) {
+      updateData.username = safeEdit(editProfileDto.username);
+    }
+
+    if (hasField('phone_number')) {
+      updateData.phone_number = safeEdit(editProfileDto.phone_number);
+    }
+
+    if (hasField('country')) {
+      updateData.country = safeEdit(editProfileDto.country);
+    }
+
+    if (hasField('emergency_contact')) {
+      updateData.emergency_contact = safeEdit(editProfileDto.emergency_contact);
+    }
+
+    if (hasField('home_address')) {
+      updateData.home_address = safeEdit(editProfileDto.home_address);
+    }
+
+    if (hasField('bio')) {
+      updateData.bio = safeEdit(editProfileDto.bio);
+    }
+
+    if (hasField('date_of_birth')) {
+      updateData.date_of_birth = editProfileDto.date_of_birth
+        ? new Date(editProfileDto.date_of_birth)
+        : undefined;
+    }
+
+    if (hasField('profile_picture_id') && editProfileDto.profile_picture_id) {
+      updateData.profile_picture = {
+        connect: {
+          id: editProfileDto.profile_picture_id,
+        },
+      };
+    }
+
     await this.db.user.update({
       where: {
         id: userId,
       },
-      data: {
-        first_name: safeEdit(editProfileDto?.first_name),
-        last_name: safeEdit(editProfileDto?.last_name),
-        username: safeEdit(editProfileDto?.username),
-        phone_number: safeEdit(editProfileDto?.phone_number),
-        country: safeEdit(editProfileDto?.country),
-        // gender: editProfileDto?.gender,
-        bio: editProfileDto?.bio,
-        profile_picture: editProfileDto?.profile_picture_id
-          ? {
-              connect: {
-                id: editProfileDto.profile_picture_id,
-              },
-            }
-          : undefined,
-        interests:
-          removedInterests?.length > 0
-            ? {
-                disconnect: removedInterests?.map((interest) => {
-                  return {
-                    name: interest,
-                  };
-                }),
-              }
-            : undefined,
-      },
+      data: updateData,
     });
 
     return {

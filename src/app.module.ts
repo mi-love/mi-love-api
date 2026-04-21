@@ -15,6 +15,8 @@ import { ChatModule } from './modules/chats/chat.module';
 import { EmergencyModule } from './modules/emergencies/emergency.module';
 import { NotificationModule } from './modules/notifications/notification.module';
 import { StreamModule } from './modules/streams/stream.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { QueueModule } from './queue/queue.module';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { StreamModule } from './modules/streams/stream.module';
     NotificationModule,
     EmergencyModule,
     StreamModule,
+    AdminModule,
+    QueueModule,
   ],
   controllers: [],
   providers: [],
