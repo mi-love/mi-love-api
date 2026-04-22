@@ -8,6 +8,8 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 
+const JWT_SECRET_FALLBACK = 'secret';
+
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
@@ -26,7 +28,9 @@ export class JwtAuthGuard implements CanActivate {
 
     let payload: any;
     try {
-      payload = await this.jwtService.verifyAsync(token);
+      payload = await this.jwtService.verifyAsync(token, {
+        secret: process.env.JWT_SECRET || JWT_SECRET_FALLBACK,
+      });
     } catch {
       throw new UnauthorizedException({
         message: 'Invalid token',

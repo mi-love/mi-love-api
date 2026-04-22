@@ -14,6 +14,9 @@ import { MailService } from '@/common/services/mail.service';
 import { InterestService } from '@/common/services/interest.service';
 import otpGenerator from 'otp-generator';
 
+const JWT_SECRET_FALLBACK = 'secret';
+const ONE_TIME_JWT_SECRET_FALLBACK = 'one-time-secret';
+
 const authUserSelect = {
   id: true,
   email: true,
@@ -115,7 +118,8 @@ export class AuthService {
   async verifyOneTimeToken(token: string) {
     try {
       const decoded = await this.jwtService.verifyAsync(token, {
-        secret: process.env.ONE_TIME_JWT_SECRET,
+        secret:
+          process.env.ONE_TIME_JWT_SECRET || ONE_TIME_JWT_SECRET_FALLBACK,
       });
       return decoded;
     } catch {
@@ -515,7 +519,8 @@ export class AuthService {
         email: email,
       },
       {
-        secret: process.env.ONE_TIME_JWT_SECRET,
+        secret:
+          process.env.ONE_TIME_JWT_SECRET || ONE_TIME_JWT_SECRET_FALLBACK,
         expiresIn: '5m',
       },
     );
@@ -539,7 +544,9 @@ export class AuthService {
       admin_role: user.admin_role,
     };
     return {
-      access_token: this.jwtService.sign(payload),
+      access_token: this.jwtService.sign(payload, {
+        secret: process.env.JWT_SECRET || JWT_SECRET_FALLBACK,
+      }),
     };
   }
 

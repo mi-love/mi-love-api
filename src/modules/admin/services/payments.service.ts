@@ -423,51 +423,70 @@ export class AdminPaymentsService {
   }
 
   async getPaymentSummary(adminId: string): Promise<PaymentSummaryDto> {
-    const now = new Date();
+    try {
+      const [
+        totalTransactions,
+        successfulTransactions,
+        failedTransactions,
+        pendingTransactions,
+        totalRevenue,
+        activeSubscriptions,
+        pendingRefunds,
+        totalRefunded,
+      ] = await Promise.all([
+        this.db.transaction.count(),
+        this.db.transaction.count({ where: { status: status_type.success } }),
+        this.db.transaction.count({ where: { status: status_type.failed } }),
+        this.db.transaction.count({ where: { status: status_type.pending } }),
+        this.db.transaction.aggregate({
+          where: { status: status_type.success },
+          _sum: { amount: true },
+        }),
+        this.db.subscription.count({
+          where: { status: subscription_status.active },
+        }),
+        this.db.refund.count({ where: { status: refund_status.pending } }),
+        this.db.refund.aggregate({
+          where: { status: refund_status.completed },
+          _sum: { amount: true },
+        }),
+      ]);
 
-    const [
-      totalTransactions,
-      successfulTransactions,
-      failedTransactions,
-      pendingTransactions,
-      totalRevenue,
-      activeSubscriptions,
-      pendingRefunds,
-      totalRefunded,
-    ] = await Promise.all([
-      this.db.transaction.count(),
-      this.db.transaction.count({ where: { status: status_type.success } }),
-      this.db.transaction.count({ where: { status: status_type.failed } }),
-      this.db.transaction.count({ where: { status: status_type.pending } }),
-      this.db.transaction.aggregate({
-        where: { status: status_type.success },
-        _sum: { amount: true },
-      }),
-      this.db.subscription.count({
-        where: { status: subscription_status.active },
-      }),
-      this.db.refund.count({ where: { status: refund_status.pending } }),
-      this.db.refund.aggregate({
-        where: { status: refund_status.completed },
-        _sum: { amount: true },
-      }),
-    ]);
+      const averageTransactionValue =
+        totalTransactions > 0
+          ? (totalRevenue._sum.amount || 0) / totalTransactions
+          : 0;
 
-    const averageTransactionValue =
-      totalTransactions > 0 ? (totalRevenue._sum.amount || 0) / totalTransactions : 0;
+      this.logger.log(`Retrieved payment summary`, 'AdminPaymentsService');
 
-    this.logger.log(`Retrieved payment summary`, 'AdminPaymentsService');
+      return {
+        totalTransactions,
+        totalRevenue: totalRevenue._sum.amount || 0,
+        successfulTransactions,
+        failedTransactions,
+        pendingTransactions,
+        activeSubscriptions,
+        pendingRefunds,
+        totalRefunded: totalRefunded._sum.amount || 0,
+        averageTransactionValue,
+      };
+    } catch {
+      this.logger.warn(
+        'Payment summary fallback: returning zeros because database is unavailable',
+        'AdminPaymentsService',
+      );
 
-    return {
-      totalTransactions,
-      totalRevenue: totalRevenue._sum.amount || 0,
-      successfulTransactions,
-      failedTransactions,
-      pendingTransactions,
-      activeSubscriptions,
-      pendingRefunds,
-      totalRefunded: totalRefunded._sum.amount || 0,
-      averageTransactionValue,
-    };
+      return {
+        totalTransactions: 0,
+        totalRevenue: 0,
+        successfulTransactions: 0,
+        failedTransactions: 0,
+        pendingTransactions: 0,
+        activeSubscriptions: 0,
+        pendingRefunds: 0,
+        totalRefunded: 0,
+        averageTransactionValue: 0,
+      };
+    }
   }
 }

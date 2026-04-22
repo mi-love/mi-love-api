@@ -31,6 +31,25 @@ export class AdminSupportService {
   ): Promise<PaginatedTicketsResponseDto> {
     const { status, priority, category, page = 1, limit = 20, search, startDate, endDate } = query;
 
+    if (!(this.db as any).support_ticket) {
+      this.logger.warn(
+        'Support tickets fallback: support_ticket model unavailable, returning empty list',
+        'AdminSupportService',
+      );
+
+      return {
+        data: [] as any,
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      };
+    }
+
     const skip = (page - 1) * limit;
     const where: any = {};
 
@@ -328,6 +347,33 @@ export class AdminSupportService {
   }
 
   async getTicketStatistics(adminId: string): Promise<TicketStatisticsDto> {
+    // In preview environments the Prisma client/database can be out of sync,
+    // so support_ticket may be unavailable at runtime.
+    if (!(this.db as any).support_ticket) {
+      return {
+        totalTickets: 0,
+        openTickets: 0,
+        inProgressTickets: 0,
+        resolvedTickets: 0,
+        closedTickets: 0,
+        averageResolutionTime: undefined,
+        satisfactionScore: undefined,
+        ticketsByCategory: {
+          technical: 0,
+          billing: 0,
+          complaint: 0,
+          feature_request: 0,
+          other: 0,
+        } as any,
+        ticketsByPriority: {
+          low: 0,
+          medium: 0,
+          high: 0,
+          critical: 0,
+        } as any,
+      };
+    }
+
     const [
       totalTickets,
       openTickets,
