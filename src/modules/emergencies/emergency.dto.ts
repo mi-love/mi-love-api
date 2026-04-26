@@ -1,4 +1,6 @@
 export class PanicDto {
+  phone_number?: string;
+  emergency_contact?: string;
   latitude: number;
   longitude: number;
   reason?: string;

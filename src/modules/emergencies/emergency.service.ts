@@ -11,6 +11,7 @@ import {
   PanicDto,
 } from './emergency.dto';
 import { WhatsappService } from '@/common/services/whatsapp.service';
+import { MailService } from '@/common/services/mail.service';
 import { UserWithoutPassword } from '@/common/types/db';
 import { DbService } from '@/database/database.service';
 
@@ -21,13 +22,19 @@ export class EmergencyService {
   constructor(
     readonly whatsappService: WhatsappService,
     readonly db: DbService,
+    readonly mailService: MailService,
   ) {}
 
   async handlePanicButtonPress(user: UserWithoutPassword, json: PanicDto) {
     const body = json ?? {};
-    const contact = user.emergency_contact;
+    const emergencyNumber =
+      body.phone_number?.trim() ||
+      body.emergency_contact?.trim() ||
+      user.emergency_contact ||
+      '';
+    const panicEmail = user.email?.trim() || '';
     this.logger.log(
-      `Panic alert requested userId=${user.id} contact=${this.maskPhoneNumber(contact)} hasReason=${Boolean(body.reason)} hasLatitude=${body.latitude != null} hasLongitude=${body.longitude != null}`,
+      `Panic alert requested userId=${user.id} emergencyNumber=${this.maskPhoneNumber(emergencyNumber)} panicEmail=${this.maskEmail(panicEmail)} hasReason=${Boolean(body.reason)} hasLatitude=${body.latitude != null} hasLongitude=${body.longitude != null}`,
     );
     // const panic_action = await this.db.panic_actions.create({
     //   data: {
@@ -40,35 +47,51 @@ export class EmergencyService {
     //     longitude: body.longitude,
     //   },
     // });
-    if (contact) {
+    if (panicEmail) {
       try {
-        const response = await this.whatsappService.sendPanicAlertTemplate({
-          to: contact,
-          name: `${user.first_name} ${user.last_name}`.trim(),
-          email: user.email || 'Unknown',
-          location: user.home_address?.trim() || 'Unknown',
-          latitude: String(body.latitude ?? 'Unknown'),
-          longitude: String(body.longitude ?? 'Unknown'),
-          time: this.formatPanicTime(new Date()),
+        const mapUrl =
+          body.latitude != null && body.longitude != null
+            ? `https://www.google.com/maps?q=${body.latitude},${body.longitude}`
+            : 'Unknown';
+
+        const panicTime = this.formatPanicTime(new Date());
+        const fullName = `${user.first_name} ${user.last_name}`.trim() ||
+          'Unknown User';
+
+        await this.mailService.sendEmail({
+          to: panicEmail,
+          subject: 'Panic Alert Triggered',
+          body: [
+            `A panic alert has been triggered by ${fullName}.`,
+            '',
+            `Email: ${panicEmail}`,
+            `Emergency Number: ${emergencyNumber || 'Unknown'}`,
+            `Reason: ${body.reason?.trim() || 'Not provided'}`,
+            `Home Address: ${user.home_address?.trim() || 'Unknown'}`,
+            `Latitude: ${body.latitude ?? 'Unknown'}`,
+            `Longitude: ${body.longitude ?? 'Unknown'}`,
+            `Map: ${mapUrl}`,
+            `Time: ${panicTime}`,
+          ].join('\n'),
         });
 
         this.logger.log(
-          `Panic template sent successfully contact=${this.maskPhoneNumber(contact)} messageId=${response?.messages?.[0]?.id || 'unknown'}`,
+          `Panic email sent successfully to=${this.maskEmail(panicEmail)}`,
         );
 
         return {
           message: 'Panic Alert sent successfully',
         };
       } catch (error: any) {
-        const message = error?.message || 'Failed to send panic alert template message';
+        const message = error?.message || 'Failed to send panic alert email';
         this.logger.error(
-          `Panic template send failed contact=${this.maskPhoneNumber(contact)} error=${message}`,
+          `Panic email send failed to=${this.maskEmail(panicEmail)} error=${message}`,
         );
 
         throw new HttpException(
           {
             message,
-            provider: 'meta',
+            provider: 'email',
           },
           HttpStatus.BAD_GATEWAY,
         );
@@ -76,11 +99,11 @@ export class EmergencyService {
     }
 
     this.logger.warn(
-      `Panic alert skipped userId=${user.id} due to missing emergency contact`,
+      `Panic alert skipped userId=${user.id} due to missing registered email`,
     );
 
     return {
-      message: 'Panic Alert not sent due to no contact',
+      message: 'Panic Alert not sent due to missing registered email',
     };
   }
 
@@ -120,6 +143,24 @@ export class EmergencyService {
     }
 
     return `${normalized.slice(0, 3)}***${normalized.slice(-3)}`;
+  }
+
+  private maskEmail(email?: string | null): string {
+    const value = (email || '').trim();
+    if (!value || !value.includes('@')) {
+      return 'missing';
+    }
+
+    const [name, domain] = value.split('@');
+    if (!name || !domain) {
+      return 'missing';
+    }
+
+    if (name.length <= 2) {
+      return `${name[0] || '*'}***@${domain}`;
+    }
+
+    return `${name.slice(0, 2)}***@${domain}`;
   }
 
   async handleWebhook(body: MetaWebhookResponse, query: MetaWebhookParamsDto) {
