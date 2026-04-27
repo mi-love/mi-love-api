@@ -184,78 +184,102 @@ export class FriendsService {
   async addFriend({ userId, friendId }: { userId: string; friendId: string }) {
     const friend = await this.userExists(friendId);
 
-    await this.db.$transaction(async (tx) => {
-      await tx.user.update({
-        where: {
-          id: userId,
-        },
-        data: {
-          my_friends: {
-            connect: {
-              id: friendId,
-            },
+    await this.db.$transaction(
+      async (tx) => {
+        await tx.user.update({
+          where: {
+            id: userId,
           },
-          friends: {
-            connect: {
-              id: friendId,
+          data: {
+            my_friends: {
+              connect: {
+                id: friendId,
+              },
             },
-          },
-        },
-      });
-
-      const chatWithFriendExists = await tx.chat.findFirst({
-        where: {
-          participants: {
-            some: {
-              userId: {
-                in: [userId, friendId],
+            friends: {
+              connect: {
+                id: friendId,
               },
             },
           },
-        },
-      });
-
-      if (chatWithFriendExists) {
-        await tx.chat.update({
-          where: {
-            id: chatWithFriendExists.id,
-          },
-          data: {
-            can_send_messages: true,
-          },
         });
-      }
 
-      await tx.chat.create({
-        data: {
-          participants: {
-            create: [
+        const chatWithFriendExists = await tx.chat.findFirst({
+          where: {
+            AND: [
               {
-                user: {
-                  connect: {
-                    id: userId,
+                participants: {
+                  some: {
+                    userId,
                   },
                 },
               },
               {
-                user: {
-                  connect: {
-                    id: friendId,
+                participants: {
+                  some: {
+                    userId: friendId,
+                  },
+                },
+              },
+              {
+                participants: {
+                  every: {
+                    userId: {
+                      in: [userId, friendId],
+                    },
                   },
                 },
               },
             ],
           },
-          messages: {
-            create: {
-              type: 'announcement',
-              content: 'You are now friends',
+        });
+
+        if (chatWithFriendExists) {
+          await tx.chat.update({
+            where: {
+              id: chatWithFriendExists.id,
             },
+            data: {
+              can_send_messages: true,
+            },
+          });
+          return;
+        }
+
+        await tx.chat.create({
+          data: {
+            participants: {
+              create: [
+                {
+                  user: {
+                    connect: {
+                      id: userId,
+                    },
+                  },
+                },
+                {
+                  user: {
+                    connect: {
+                      id: friendId,
+                    },
+                  },
+                },
+              ],
+            },
+            messages: {
+              create: {
+                type: 'announcement',
+                content: 'You are now friends',
+              },
+            },
+            can_send_messages: true,
           },
-          can_send_messages: true,
-        },
-      });
-    });
+        });
+      },
+      {
+        timeout: 15000,
+      },
+    );
 
     return {
       message: 'Added to friends list',
