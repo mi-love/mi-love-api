@@ -400,12 +400,44 @@ export class AuthService {
         to: email.toString(),
         subject: subject || 'Verify your account',
         body: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #333;">Verify your account</h2>
-        <p style="font-size: 16px; color: #666;">Your verification code is:</p>
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 24px; font-weight: bold; text-align: center; color: #28a745;">
-          ${otp}
-        </div>
+      <div style="margin:0;padding:0;background:#f4f5fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f5fb;padding:24px 12px;">
+          <tr>
+            <td align="center">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;">
+                <tr>
+                  <td style="background:#111827;padding:20px 24px;">
+                    <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#cbd5e1;">Mi Love Security</div>
+                    <div style="margin-top:6px;font-size:24px;font-weight:700;line-height:1.2;color:#ffffff;">Verify Your Account</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:24px;">
+                    <p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:#374151;">Use the one-time verification code below to continue. This code is time-sensitive and should not be shared with anyone.</p>
+
+                    <div style="margin:18px 0 10px 0;padding:16px;border:1px dashed #c7d2fe;border-radius:10px;background:#f8faff;text-align:center;">
+                      <div style="font-size:12px;letter-spacing:0.8px;text-transform:uppercase;color:#6b7280;">Your Verification Code</div>
+                      <div style="margin-top:8px;font-size:34px;line-height:1;font-weight:800;letter-spacing:8px;color:#111827;">${otp}</div>
+                    </div>
+
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:16px;border-collapse:collapse;">
+                      <tr>
+                        <td style="padding:10px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600;font-size:13px;color:#374151;width:34%;">Expires</td>
+                        <td style="padding:10px 12px;border:1px solid #e5e7eb;font-size:13px;color:#374151;">5 minutes</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600;font-size:13px;color:#374151;">Requested For</td>
+                        <td style="padding:10px 12px;border:1px solid #e5e7eb;font-size:13px;color:#374151;">${email}</td>
+                      </tr>
+                    </table>
+
+                    <p style="margin:16px 0 0 0;font-size:12px;line-height:1.6;color:#6b7280;">If you did not request this code, you can ignore this email. For your security, never share this code with anyone.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </div>`,
       })
       .catch(() => null);
@@ -521,7 +553,7 @@ export class AuthService {
       {
         secret:
           process.env.ONE_TIME_JWT_SECRET || ONE_TIME_JWT_SECRET_FALLBACK,
-        expiresIn: '5m',
+        expiresIn: '2h',
       },
     );
 

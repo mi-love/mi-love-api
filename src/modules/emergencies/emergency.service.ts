@@ -27,14 +27,26 @@ export class EmergencyService {
 
   async handlePanicButtonPress(user: UserWithoutPassword, json: PanicDto) {
     const body = json ?? {};
+    const dbUser = await this.db.user.findUnique({
+      where: {
+        id: user.id,
+      },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        emergency_contact: true,
+        home_address: true,
+      },
+    });
+
+    const emergencyEmail = dbUser?.emergency_contact?.trim() || '';
     const emergencyNumber =
       body.phone_number?.trim() ||
       body.emergency_contact?.trim() ||
-      user.emergency_contact ||
       '';
-    const panicEmail = user.email?.trim() || '';
     this.logger.log(
-      `Panic alert requested userId=${user.id} emergencyNumber=${this.maskPhoneNumber(emergencyNumber)} panicEmail=${this.maskEmail(panicEmail)} hasReason=${Boolean(body.reason)} hasLatitude=${body.latitude != null} hasLongitude=${body.longitude != null}`,
+      `Panic alert requested userId=${user.id} emergencyNumber=${this.maskPhoneNumber(emergencyNumber)} emergencyContact=${this.maskEmail(emergencyEmail)} hasReason=${Boolean(body.reason)} hasLatitude=${body.latitude != null} hasLongitude=${body.longitude != null}`,
     );
     // const panic_action = await this.db.panic_actions.create({
     //   data: {
@@ -47,7 +59,7 @@ export class EmergencyService {
     //     longitude: body.longitude,
     //   },
     // });
-    if (panicEmail) {
+    if (emergencyEmail) {
       try {
         const mapUrl =
           body.latitude != null && body.longitude != null
@@ -55,28 +67,30 @@ export class EmergencyService {
             : 'Unknown';
 
         const panicTime = this.formatPanicTime(new Date());
-        const fullName = `${user.first_name} ${user.last_name}`.trim() ||
+        const fullName = `${dbUser?.first_name || ''} ${dbUser?.last_name || ''}`.trim() ||
           'Unknown User';
+        const reason = body.reason?.trim() || 'Not provided';
+        const homeAddress = dbUser?.home_address?.trim() || 'Unknown';
+        const template = this.buildPanicAlertEmailTemplate({
+          fullName,
+          emergencyEmail,
+          emergencyNumber,
+          reason,
+          homeAddress,
+          latitude: body.latitude,
+          longitude: body.longitude,
+          mapUrl,
+          panicTime,
+        });
 
         await this.mailService.sendEmail({
-          to: panicEmail,
-          subject: 'Panic Alert Triggered',
-          body: [
-            `A panic alert has been triggered by ${fullName}.`,
-            '',
-            `Email: ${panicEmail}`,
-            `Emergency Number: ${emergencyNumber || 'Unknown'}`,
-            `Reason: ${body.reason?.trim() || 'Not provided'}`,
-            `Home Address: ${user.home_address?.trim() || 'Unknown'}`,
-            `Latitude: ${body.latitude ?? 'Unknown'}`,
-            `Longitude: ${body.longitude ?? 'Unknown'}`,
-            `Map: ${mapUrl}`,
-            `Time: ${panicTime}`,
-          ].join('\n'),
+          to: emergencyEmail,
+          subject: 'URGENT: Panic Alert Triggered',
+          body: template,
         });
 
         this.logger.log(
-          `Panic email sent successfully to=${this.maskEmail(panicEmail)}`,
+          `Panic email sent successfully to=${this.maskEmail(emergencyEmail)}`,
         );
 
         return {
@@ -85,7 +99,7 @@ export class EmergencyService {
       } catch (error: any) {
         const message = error?.message || 'Failed to send panic alert email';
         this.logger.error(
-          `Panic email send failed to=${this.maskEmail(panicEmail)} error=${message}`,
+          `Panic email send failed to=${this.maskEmail(emergencyEmail)} error=${message}`,
         );
 
         throw new HttpException(
@@ -99,12 +113,90 @@ export class EmergencyService {
     }
 
     this.logger.warn(
-      `Panic alert skipped userId=${user.id} due to missing registered email`,
+      `Panic alert skipped userId=${user.id} due to missing emergency contact`,
     );
 
     return {
-      message: 'Panic Alert not sent due to missing registered email',
+      message: 'Panic Alert not sent due to missing emergency contact',
     };
+  }
+
+  private buildPanicAlertEmailTemplate(data: {
+    fullName: string;
+    emergencyEmail: string;
+    emergencyNumber: string;
+    reason: string;
+    homeAddress: string;
+    latitude?: number;
+    longitude?: number;
+    mapUrl: string;
+    panicTime: string;
+  }): string {
+    const accentColor = '#d41372';
+
+    return `
+      <div style="margin:0;padding:0;background:#f7f7fb;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f7f7fb;padding:24px 12px;">
+          <tr>
+            <td align="center">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #ececf3;">
+                <tr>
+                  <td style="background:${accentColor};padding:18px 24px;color:#ffffff;">
+                    <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;opacity:0.95;">Emergency Notification</div>
+                    <div style="font-size:24px;font-weight:700;line-height:1.2;margin-top:6px;">Panic Alert Triggered</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:24px;">
+                    <p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;">This is an automated emergency alert. A panic event was triggered and requires immediate attention.</p>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;">
+                      <tr>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;background:#fafbfe;font-weight:600;width:42%;">User</td>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;">${data.fullName}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;background:#fafbfe;font-weight:600;">Emergency Contact</td>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;">${data.emergencyEmail}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;background:#fafbfe;font-weight:600;">Emergency Number</td>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;">${data.emergencyNumber || 'Unknown'}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;background:#fafbfe;font-weight:600;">Reason</td>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;">${data.reason}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;background:#fafbfe;font-weight:600;">Home Address</td>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;">${data.homeAddress}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;background:#fafbfe;font-weight:600;">Latitude</td>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;">${data.latitude ?? 'Unknown'}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;background:#fafbfe;font-weight:600;">Longitude</td>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;">${data.longitude ?? 'Unknown'}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;background:#fafbfe;font-weight:600;">Alert Time</td>
+                        <td style="padding:10px 12px;border:1px solid #ececf3;">${data.panicTime}</td>
+                      </tr>
+                    </table>
+
+                    <div style="margin-top:20px;">
+                      <a href="${data.mapUrl}" style="display:inline-block;background:${accentColor};color:#ffffff;text-decoration:none;font-size:14px;font-weight:600;padding:12px 18px;border-radius:8px;">Open Live Location</a>
+                    </div>
+
+                    <p style="margin:20px 0 0 0;font-size:12px;line-height:1.6;color:#6b7280;">This alert was generated by the Mi Love safety system. If this is not expected, investigate the account activity immediately.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `;
   }
 
   private formatPanicTime(date: Date): string {

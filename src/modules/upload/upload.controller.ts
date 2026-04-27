@@ -5,7 +5,7 @@ import {
   // UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { UploadService } from './upload.service';
 // import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 
@@ -27,9 +27,19 @@ export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
   @Post()
-  @UseInterceptors(FilesInterceptor('files', 5))
-  uploadImage(@UploadedFiles() files: Array<MulterFile>) {
-    if (!files)
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'files', maxCount: 5 },
+      { name: 'file', maxCount: 1 },
+    ]),
+  )
+  uploadImage(
+    @UploadedFiles()
+    uploaded: { files?: Array<MulterFile>; file?: Array<MulterFile> },
+  ) {
+    const files = [...(uploaded?.files || []), ...(uploaded?.file || [])];
+
+    if (!files.length)
       return {
         message: 'No files to upload',
         data: [],

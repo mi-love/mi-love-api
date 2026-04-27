@@ -47,8 +47,23 @@ export class ProfileService {
   }
 
   async getProfile(user: UserWithoutPassword) {
+    const profile = await this.db.user.findUnique({
+      where: {
+        id: user.id,
+      },
+      include: {
+        profile_picture: true,
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException({
+        message: 'User not found',
+      });
+    }
+
     return {
-      data: user,
+      data: profile,
     };
   }
 
