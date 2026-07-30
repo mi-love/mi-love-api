@@ -69,6 +69,17 @@ enum message_type {
   announcement
 }
 
+enum chat_type {
+  direct
+  group
+}
+
+enum participant_role {
+  owner
+  admin
+  member
+}
+
 enum notification_type {
   message
   security
@@ -319,6 +330,7 @@ model file {
   gift    gift[]
   message message[]
   upload_job upload_job?
+  chat_avatars chat[] @relation("chat_avatar")
 
   @@map("files")
 }
@@ -592,7 +604,12 @@ model gift {
 }
 
 model chat {
-  id String @id @default(cuid())
+  id   String    @id @default(cuid())
+  type chat_type @default(direct)
+  name String?
+
+  avatar   file?   @relation("chat_avatar", fields: [avatarId], references: [id], onDelete: SetNull)
+  avatarId String?
 
   participants participant[]
   messages     message[]
@@ -602,6 +619,7 @@ model chat {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  @@index([type])
   @@map("chats")
 }
 
@@ -611,6 +629,7 @@ model participant {
   chatId String
 
   mute DateTime?
+  role participant_role @default(member)
 
   user   user   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
@@ -618,6 +637,8 @@ model participant {
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  @@unique([chatId, userId])
+  @@index([userId])
   @@map("participants")
 }
 
