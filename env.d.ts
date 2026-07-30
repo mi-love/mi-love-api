@@ -19,5 +19,11 @@ declare namespace NodeJS {
     EXPO_ACCESS_TOKEN: string;
     META_TOKEN_VERIFICATION_KEY: string;
     META_ACCESS_TOKEN: string;
+    REDIS_HOST?: string;
+    REDIS_PORT?: string;
+    REDIS_PASSWORD?: string;
+    CLOUDINARY_CLOUD_NAME?: string;
+    CLOUDINARY_API_KEY?: string;
+    CLOUDINARY_API_SECRET?: string;
   }
 }

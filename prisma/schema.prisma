@@ -41,6 +41,13 @@ enum file_type {
   document
 }
 
+enum upload_job_status {
+  queued
+  processing
+  completed
+  failed
+}
+
 enum transaction_type {
   credit
   debit
@@ -208,6 +215,7 @@ model user {
   refunds_requested refund[] @relation("refund_requested_by")
   admin_logs     admin_action_log[] @relation("admin_actor")
   notification_logs notification_log[] @relation("notification_recipient")
+  upload_jobs       upload_job[]
 
   @@map("users")
 }
@@ -310,8 +318,32 @@ model file {
   user    user[]
   gift    gift[]
   message message[]
+  upload_job upload_job?
 
   @@map("files")
+}
+
+model upload_job {
+  id           String            @id @default(cuid())
+  userId       String
+  user         user              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       upload_job_status @default(queued)
+  originalName String?
+  mimeType     String?
+  sizeBytes    Int?
+  localPath    String?
+  error        String?           @db.Text
+  progress     Int               @default(0)
+  fileId       String?           @unique
+  file         file?             @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  bullJobId    String?
+  created_at   DateTime          @default(now())
+  updated_at   DateTime          @updatedAt
+  completed_at DateTime?
+
+  @@index([userId, created_at])
+  @@index([status])
+  @@map("upload_jobs")
 }
 
 model reaction {

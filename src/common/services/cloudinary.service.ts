@@ -21,11 +21,14 @@ export class CloudinaryService {
         {
           folder,
           public_id: fileName,
+          // auto detects image vs video (required for mp4/mov/webm)
           resource_type: 'auto',
         },
         (error, result) => {
           if (error) {
             reject(error);
+          } else if (!result?.secure_url || !result?.public_id) {
+            reject(new Error('Cloudinary upload returned empty result'));
           } else {
             resolve({
               secure_url: result.secure_url,
@@ -37,6 +40,29 @@ export class CloudinaryService {
 
       uploadStream.end(fileBuffer);
     });
+  }
+
+  /** Stream large videos from disk (background worker) — avoids loading into RAM. */
+  async uploadFromPath(
+    filePath: string,
+    fileName: string,
+    folder: string = 'mi-love-api/videos',
+  ): Promise<{ secure_url: string; public_id: string }> {
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder,
+      public_id: fileName,
+      resource_type: 'auto',
+      chunk_size: 6_000_000,
+    });
+
+    if (!result?.secure_url || !result?.public_id) {
+      throw new Error('Cloudinary upload returned empty result');
+    }
+
+    return {
+      secure_url: result.secure_url,
+      public_id: result.public_id,
+    };
   }
 
   async deleteFile(publicId: string): Promise<void> {

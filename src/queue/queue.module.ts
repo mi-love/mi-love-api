@@ -8,6 +8,7 @@ import { NotificationQueueConsumer } from './consumers/notification-queue.consum
 import { RefundQueueConsumer } from './consumers/refund-queue.consumer';
 import { ReportGenerationConsumer } from './consumers/report-generation.consumer';
 import { FraudDetectionConsumer } from './consumers/fraud-detection.consumer';
+import { VIDEO_UPLOAD_QUEUE } from './consumers/video-upload.consumer';
 
 @Module({
   imports: [
@@ -15,7 +16,7 @@ import { FraudDetectionConsumer } from './consumers/fraud-detection.consumer';
       redis: {
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379'),
-        password: process.env.REDIS_PASSWORD,
+        password: process.env.REDIS_PASSWORD || undefined,
       },
     }),
     BullModule.registerQueue(
@@ -23,6 +24,7 @@ import { FraudDetectionConsumer } from './consumers/fraud-detection.consumer';
       { name: 'refunds' },
       { name: 'report-generation' },
       { name: 'fraud-detection' },
+      { name: VIDEO_UPLOAD_QUEUE },
     ),
     DatabaseModule,
   ],
@@ -33,5 +35,6 @@ import { FraudDetectionConsumer } from './consumers/fraud-detection.consumer';
     ReportGenerationConsumer,
     FraudDetectionConsumer,
   ],
+  exports: [BullModule],
 })
 export class QueueModule {}

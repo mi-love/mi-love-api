@@ -7,20 +7,27 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class createPostDto {
+  /** Caption — optional when at least one media file is attached (video posts). */
+  @ValidateIf((o: createPostDto) => !o.files?.length)
   @IsString()
   @IsNotEmpty()
-  content: string;
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  content?: string;
 
   @IsEnum(post_visibility)
-  visibility: post_visibility;
+  @IsOptional()
+  visibility?: post_visibility;
 
+  /** File IDs from `POST /upload` (images and/or videos). */
   @IsArray()
   @IsOptional()
-  files: string[];
+  @IsString({ each: true })
+  files?: string[];
 }
 
 export class getPostsDto {
@@ -32,6 +39,19 @@ export class getPostsDto {
   page: number;
 
   order: 'desc' | 'asc';
+}
+
+export class getVideoFeedDto {
+  @IsOptional()
+  page?: number;
+
+  @IsOptional()
+  limit?: number;
+
+  /** Cursor: return videos older than this post id (infinite scroll). */
+  @IsOptional()
+  @IsString()
+  cursor?: string;
 }
 
 export class updatePostDto {

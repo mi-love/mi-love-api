@@ -15,6 +15,7 @@ import { DbService } from '@/database/database.service';
 import { UserWithoutPassword } from '@/common/types/db';
 import { file } from '@prisma/client';
 import { ChatService } from './chat.service';
+import { extractSocketToken } from '@/common/utils/socket-auth';
 
 @WebSocketGateway({
   namespace: 'chat',
@@ -37,11 +38,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   async handleConnection(client: Socket): Promise<void> {
     try {
-      const token = this.extractTokenFromHeader(client);
+      const token = extractSocketToken(client);
 
       if (!token) {
         this.logger.warn(
-          `Socket ${client.id}: connect rejected (no Bearer token)`,
+          `Socket ${client.id}: connect rejected (no token in headers.authorization or handshake.auth)`,
         );
         client.disconnect();
         return;
@@ -86,13 +87,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     toUserId: string,
     payload: Record<string, unknown>,
   ) {
-    const toSocketId = this.users.get(toUserId);
-    const fromSocketId = this.users.get(fromUserId);
-    if (toSocketId) {
-      this.server.to(toSocketId).emit('private-message', payload);
-    }
-    if (fromSocketId) {
-      this.server.to(fromSocketId).emit('private-message', payload);
+    const targets = new Set(
+      [this.users.get(toUserId), this.users.get(fromUserId)].filter(
+        (id): id is string => Boolean(id),
+      ),
+    );
+    for (const socketId of targets) {
+      this.server.to(socketId).emit('private-message', payload);
     }
   }
 
@@ -315,12 +316,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   isUserConnected(userId: string): boolean {
     return this.users.has(userId);
-  }
-
-  private extractTokenFromHeader(client: Socket): string | undefined {
-    const [type, token] =
-      client.handshake.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
   }
 
   private attachSocketRequestLogging(client: Socket, userId: string): void {

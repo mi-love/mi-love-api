@@ -5,8 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { DbService } from '@/database/database.service';
-import { createCommentDto, createPostDto, getPostsDto, updatePostDto } from './posts.dto';
-import { Prisma } from '@prisma/client';
+import {
+  createCommentDto,
+  createPostDto,
+  getPostsDto,
+  getVideoFeedDto,
+  updatePostDto,
+} from './posts.dto';
+import { Prisma, file_type } from '@prisma/client';
 import { UserWithoutPassword } from '@/common/types/db';
 import {
   PaginationParams,
@@ -23,6 +29,54 @@ const commentUserSelect = {
     select: { url: true },
   },
 } as const;
+
+const postAuthorSelect = {
+  id: true,
+  first_name: true,
+  last_name: true,
+  username: true,
+  email: true,
+  profile_picture: {
+    select: {
+      url: true,
+      provider: true,
+    },
+  },
+} as const;
+
+const postFileSelect = {
+  id: true,
+  url: true,
+  provider: true,
+  type: true,
+} as const;
+
+function fileThumbnailUrl(url: string, type: file_type): string | null {
+  if (type !== file_type.video) return null;
+  if (url.includes('/video/upload/')) {
+    return url
+      .replace('/video/upload/', '/video/upload/so_0/')
+      .replace(/\.(mp4|mov|webm|m4v|avi)(\?.*)?$/i, '.jpg$2');
+  }
+  return null;
+}
+
+function mapPostFiles(
+  files: Array<{
+    id: string;
+    url: string;
+    provider: string;
+    type: file_type;
+  }>,
+) {
+  return files.map((f) => ({
+    id: f.id,
+    url: f.url,
+    provider: f.provider,
+    type: f.type,
+    thumbnailUrl: fileThumbnailUrl(f.url, f.type),
+  }));
+}
 
 @Injectable()
 export class PostsService {
@@ -157,30 +211,16 @@ export class PostsService {
       skip,
       take: Number(limit),
       include: {
-        user: {
-          select: {
-            first_name: true,
-            id: true,
-            email: true,
-            last_name: true,
-            username: true,
-            profile_picture: {
-              select: {
-                url: true,
-                provider: true,
-              },
-            },
-          },
-        },
+        user: { select: postAuthorSelect },
         files: {
-          select: {
-            url: true,
-            provider: true,
-          },
+          select: postFileSelect,
           take: 5,
-          orderBy: {
-            created_at: 'desc',
-          },
+          orderBy: { created_at: 'desc' },
+        },
+        likes: {
+          where: { id: user.id },
+          select: { id: true },
+          take: 1,
         },
         _count: {
           select: {
@@ -195,7 +235,14 @@ export class PostsService {
       },
     });
     return {
-      posts,
+      posts: posts.map((p) => {
+        const { likes, files, ...rest } = p;
+        return {
+          ...rest,
+          files: mapPostFiles(files),
+          likedByMe: likes.length > 0,
+        };
+      }),
       meta: this.paginationUtils.getMeta({
         totalItems: allPosts,
         page: queryParams.page,
@@ -204,24 +251,127 @@ export class PostsService {
     };
   }
 
+  /**
+   * TikTok-style vertical video feed: posts that include at least one video.
+   * Newest first; supports page or cursor infinite scroll.
+   */
+  async getVideoFeed({
+    query,
+    user,
+  }: {
+    query: getVideoFeedDto;
+    user: UserWithoutPassword;
+  }) {
+    const page = Number(query.page) || 1;
+    const limit = Math.min(Math.max(Number(query.limit) || 10, 1), 20);
+
+    const friendIds = await this.db.user.findUnique({
+      where: { id: user.id },
+      select: {
+        friends: { select: { id: true } },
+        my_friends: { select: { id: true } },
+      },
+    });
+    const visibleAuthorIds = new Set<string>([
+      user.id,
+      ...(friendIds?.friends.map((f) => f.id) || []),
+      ...(friendIds?.my_friends.map((f) => f.id) || []),
+    ]);
+
+    const andFilters: Prisma.postWhereInput[] = [
+      {
+        OR: [
+          { visibility: 'public' },
+          { userId: { in: [...visibleAuthorIds] } },
+        ],
+      },
+      {
+        files: {
+          some: { type: file_type.video },
+        },
+      },
+    ];
+
+    if (query.cursor) {
+      const cursorPost = await this.db.post.findUnique({
+        where: { id: query.cursor },
+        select: { created_at: true },
+      });
+      if (cursorPost) {
+        andFilters.push({ created_at: { lt: cursorPost.created_at } });
+      }
+    }
+
+    const where: Prisma.postWhereInput = { AND: andFilters };
+
+    const totalItems = await this.db.post.count({ where });
+    const skip = query.cursor ? 0 : (page - 1) * limit;
+
+    const posts = await this.db.post.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { created_at: 'desc' },
+      include: {
+        user: { select: postAuthorSelect },
+        files: {
+          where: { type: file_type.video },
+          select: postFileSelect,
+          orderBy: { created_at: 'desc' },
+        },
+        likes: {
+          where: { id: user.id },
+          select: { id: true },
+          take: 1,
+        },
+        _count: {
+          select: {
+            likes: true,
+            comments: { where: { deleted_at: null } },
+            files: true,
+          },
+        },
+      },
+    });
+
+    const data = posts.map((p) => {
+      const { likes, files, ...rest } = p;
+      const mappedFiles = mapPostFiles(files);
+      return {
+        ...rest,
+        files: mappedFiles,
+        video: mappedFiles[0] || null,
+        likedByMe: likes.length > 0,
+      };
+    });
+
+    const nextCursor =
+      data.length === limit ? data[data.length - 1]?.id : null;
+
+    return {
+      data,
+      meta: {
+        totalPages: Math.ceil(totalItems / limit) || 1,
+        currentPage: page,
+        itemsPerPage: limit,
+        totalItems,
+        nextCursor,
+      },
+    };
+  }
+
   async getPostById(id: string, viewerId: string) {
     const post = await this.db.post.findUnique({
       where: { id },
       include: {
-        user: {
-          select: {
-            first_name: true,
-            last_name: true,
-            username: true,
-            id: true,
-            profile_picture: true,
-          },
-        },
+        user: { select: postAuthorSelect },
         files: {
-          select: {
-            provider: true,
-            url: true,
-          },
+          select: postFileSelect,
+        },
+        likes: {
+          where: { id: viewerId },
+          select: { id: true },
+          take: 1,
         },
         _count: {
           select: {
@@ -244,8 +394,13 @@ export class PostsService {
       throw new ForbiddenException({ message: 'You cannot view this post' });
     }
 
+    const { likes, files, ...rest } = post;
     return {
-      data: post,
+      data: {
+        ...rest,
+        files: mapPostFiles(files),
+        likedByMe: likes.length > 0,
+      },
     };
   }
 
@@ -277,27 +432,60 @@ export class PostsService {
     post: createPostDto;
     user: UserWithoutPassword;
   }) {
-    const post_ = await this.db.post.create({
+    const fileIds = post.files || [];
+    const content = (post.content || '').trim();
+
+    if (!content && !fileIds.length) {
+      throw new BadRequestException({
+        message: 'Post must have content or at least one media file',
+      });
+    }
+
+    if (fileIds.length) {
+      const existing = await this.db.file.findMany({
+        where: { id: { in: fileIds } },
+        select: { id: true, type: true },
+      });
+      if (existing.length !== fileIds.length) {
+        throw new BadRequestException({
+          message: 'One or more media files were not found. Upload first via POST /upload',
+        });
+      }
+    }
+
+    const created = await this.db.post.create({
       data: {
-        content: post.content,
-        visibility: post.visibility,
+        content: content || '',
+        visibility: post.visibility || 'public',
         user: {
           connect: {
             id: user.id,
           },
         },
         files: {
-          connect: (post.files || []).map((file) => ({ id: file })),
+          connect: fileIds.map((file) => ({ id: file })),
         },
       },
-      select: {
-        id: true,
+      include: {
+        user: { select: postAuthorSelect },
+        files: { select: postFileSelect },
+        _count: {
+          select: {
+            files: true,
+            likes: true,
+            comments: { where: { deleted_at: null } },
+          },
+        },
       },
     });
 
     return {
       message: 'Post created successfully',
-      data: post_,
+      data: {
+        ...created,
+        files: mapPostFiles(created.files),
+        likedByMe: false,
+      },
     };
   }
 
@@ -396,20 +584,23 @@ export class PostsService {
     query: PaginationParams & { order?: 'asc' | 'desc' },
   ) {
     await this.assertCanViewPost(postId, viewerId);
-    const { skip, limit } = this.paginationUtils.getPagination(query);
+
+    const page = Number(query.page) || 1;
+    const limit = Math.min(Math.max(Number(query.limit) || 20, 1), 50);
+    const skip = (page - 1) * limit;
     const order = query.order === 'desc' ? 'desc' : 'asc';
 
+    // Flat list of non-deleted comments (incl. one-level replies via parentId)
     const where: Prisma.commentWhereInput = {
       postId,
       deleted_at: null,
-      parentId: null,
     };
 
     const totalItems = await this.db.comment.count({ where });
     const comments = await this.db.comment.findMany({
       where,
       skip,
-      take: Math.min(limit, 50),
+      take: limit,
       orderBy: { created_at: order },
       include: {
         user: { select: commentUserSelect },
@@ -427,11 +618,12 @@ export class PostsService {
         updated_at: c.updated_at,
         user: c.user,
       })),
-      meta: this.paginationUtils.getMeta({
+      meta: {
+        totalPages: Math.ceil(totalItems / limit) || 1,
+        currentPage: page,
+        itemsPerPage: limit,
         totalItems,
-        page: query.page,
-        limit: Math.min(Number(query.limit) || 20, 50),
-      }),
+      },
     };
   }
 
@@ -444,7 +636,7 @@ export class PostsService {
     postId: string;
     userId: string;
     body: createCommentDto;
-    username: string;
+    username?: string;
   }) {
     const content = body.content?.trim();
     if (!content) {
@@ -457,6 +649,15 @@ export class PostsService {
     }
 
     const post = await this.assertCanViewPost(postId, userId);
+
+    let actorUsername = username;
+    if (!actorUsername) {
+      const actor = await this.db.user.findUnique({
+        where: { id: userId },
+        select: { username: true },
+      });
+      actorUsername = actor?.username || 'someone';
+    }
 
     if (body.parentId) {
       const parent = await this.db.comment.findFirst({
@@ -494,7 +695,7 @@ export class PostsService {
       this.notificationService
         .sendNotification({
           title: 'New comment',
-          message: `@${username} commented on your post`,
+          message: `@${actorUsername} commented on your post`,
           type: 'comment',
           userId: post.userId,
           metadata: {
@@ -549,9 +750,15 @@ export class PostsService {
       throw new NotFoundException({ message: 'Comment not found' });
     }
 
+    const actor = await this.db.user.findUnique({
+      where: { id: userId },
+      select: { is_admin: true },
+    });
+
     const isCommentAuthor = comment.userId === userId;
     const isPostAuthor = post.userId === userId;
-    if (!isCommentAuthor && !isPostAuthor) {
+    const isAdmin = Boolean(actor?.is_admin);
+    if (!isCommentAuthor && !isPostAuthor && !isAdmin) {
       throw new ForbiddenException({
         message: 'You cannot delete this comment',
       });

@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Socket } from 'socket.io';
+import { extractSocketToken } from '@/common/utils/socket-auth';
 
 @Injectable()
 export class WsAuthGuard implements CanActivate {
@@ -17,7 +18,7 @@ export class WsAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const client: Socket = context.switchToWs().getClient();
-    const token = this.extractTokenFromHeader(client);
+    const token = extractSocketToken(client);
     if (!token) {
       throw new UnauthorizedException({
         message: 'Token not found',
@@ -26,7 +27,7 @@ export class WsAuthGuard implements CanActivate {
 
     try {
       const payload = await this.jwtService.verifyAsync(token, {
-        secret: process.env.JWT_SECRET || "secret",
+        secret: process.env.JWT_SECRET || 'secret',
       });
       const user = await this.db.user.findUnique({
         where: {
@@ -34,20 +35,19 @@ export class WsAuthGuard implements CanActivate {
         },
         include: {
           wallet: true,
+          profile_picture: true,
         },
       });
+      if (!user) {
+        throw new UnauthorizedException({ message: 'User not found' });
+      }
       client.data.user = user;
       return true;
-    } catch {
+    } catch (err) {
+      if (err instanceof UnauthorizedException) throw err;
       throw new UnauthorizedException({
         message: 'Invalid token',
       });
     }
-  }
-
-  private extractTokenFromHeader(client: Socket): string | undefined {
-    const [type, token] =
-      client.handshake.headers.authorization?.split(' ') ?? [];
-    return type === 'Bearer' ? token : undefined;
   }
 }

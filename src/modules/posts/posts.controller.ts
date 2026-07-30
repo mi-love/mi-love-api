@@ -18,6 +18,7 @@ import {
   createCommentDto,
   createPostDto,
   getPostsDto,
+  getVideoFeedDto,
   updatePostDto,
 } from './posts.dto';
 import { Request } from 'express';
@@ -31,6 +32,12 @@ export class PostsController {
   @Get('/')
   async getAllPosts(@Query() query: getPostsDto, @Req() req: Request) {
     return await this.postsService.getAllPosts({ query, user: req.user });
+  }
+
+  /** TikTok-style vertical video feed — must be declared before `/:id`. */
+  @Get('/videos')
+  async getVideoFeed(@Query() query: getVideoFeedDto, @Req() req: Request) {
+    return this.postsService.getVideoFeed({ query, user: req.user });
   }
 
   @Put('/:id')

@@ -15,7 +15,8 @@ Socket auth: `Authorization: Bearer <token>` on handshake
 2. [Chat — replies](#2-chat--replies)
 3. [Chat — emoji reactions](#3-chat--emoji-reactions)
 4. [Posts — comments](#4-posts--comments)
-5. [Quick reference](#5-quick-reference)
+5. [Posts — videos / TikTok feed](#5-posts--videos--tiktok-feed)
+6. [Quick reference](#6-quick-reference)
 
 ---
 
@@ -362,6 +363,8 @@ Use REST when socket is offline; use socket for live sync.
 
 ## 4. Posts — comments
 
+Full contract: **[POSTS_COMMENTS_API.md](./POSTS_COMMENTS_API.md)**
+
 ### Types (suggested)
 
 ```typescript
@@ -424,7 +427,7 @@ Side effects:
 DELETE /posts/:postId/comments/:commentId
 ```
 
-Allowed: comment author **or** post author.
+Allowed: comment author, post author, or admin.
 
 ```json
 { "message": "Comment deleted" }
@@ -479,7 +482,31 @@ commentsApi.deleteComment(postId, commentId)
 
 ---
 
-## 5. Quick reference
+## 5. Posts — videos / TikTok feed
+
+Full contract: **[VIDEO_API.md](./VIDEO_API.md)**
+
+```http
+POST /upload          # images sync; videos → background jobs
+GET  /upload/jobs/:id # poll until file.id ready
+POST /posts           # { files: [id], content?, visibility? }
+GET  /posts/videos    # vertical feed (?page=&limit=&cursor=)
+```
+
+Files on feed/detail now include `type: "image" | "video"` and `thumbnailUrl` for videos.
+
+### Frontend checklist — videos
+
+- [ ] Upload video via authenticated `POST /upload`
+- [ ] Poll `GET /upload/jobs/:jobId` until `completed`
+- [ ] Create post with returned **`file.id`** (not job id)
+- [ ] Vertical video screen on `GET /posts/videos`
+- [ ] Play `video.url`; poster from `thumbnailUrl`
+- [ ] Infinite scroll with `meta.nextCursor`
+
+---
+
+## 6. Quick reference
 
 | Feature | Method | Path / event |
 |---------|--------|----------------|
@@ -496,6 +523,9 @@ commentsApi.deleteComment(postId, commentId)
 | List comments | REST | `GET /posts/:id/comments` |
 | Add comment | REST | `POST /posts/:id/comments` |
 | Delete comment | REST | `DELETE /posts/:id/comments/:commentId` |
+| Upload media | REST | `POST /upload` |
+| Video feed | REST | `GET /posts/videos` |
+| Create post | REST | `POST /posts` |
 
 ### Error expectations
 
