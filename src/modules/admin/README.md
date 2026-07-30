@@ -36,13 +36,28 @@ Complete reference for the Zee Love admin dashboard / back-office.
 
 \*Protect in production (currently open).
 
+### Seeded admin (default)
+
+| Field | Value |
+|-------|--------|
+| Email | `admin@milove.com` |
+| Password | `adminMiLove` |
+
+Re-seed anytime:
+
+```bash
+yarn db:seed:admin
+# or
+node scripts/seed-admin.js
+```
+
 ### Login
 
 ```http
 POST /admin/auth/login
 Content-Type: application/json
 
-{ "email": "admin@example.com", "password": "secret" }
+{ "email": "admin@milove.com", "password": "adminMiLove" }
 ```
 
 Use returned `access_token` as Bearer token for all admin routes.

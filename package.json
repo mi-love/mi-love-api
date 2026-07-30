@@ -18,6 +18,7 @@
     "start:dev": "nest start",
     "db:push": "npx prisma db push",
     "db:seed": "node ./scripts/seed.js",
+    "db:seed:admin": "node ./scripts/seed-admin.js",
     "db:generate": "npx prisma generate",
     "db:migrate": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",
