@@ -13,7 +13,7 @@ const db = new PrismaClient();
 
 const ADMIN = {
   email: 'admin@milove.com',
-  password: 'adminMiLove',
+  password: 'adminMilove',
   username: 'admin_milove',
   first_name: 'Admin',
   last_name: 'MiLove',

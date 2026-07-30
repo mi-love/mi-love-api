@@ -316,39 +316,46 @@ export class AdminChatManagementService {
       this.db.message.count(),
     ]);
 
-    let archivedChats = 0;
-    try {
-      archivedChats = await this.db.chat.count({ where: { is_archived: true } as any });
-    } catch {
-      archivedChats = 0;
-    }
-
+    // Archive = messaging disabled (no is_archived column)
+    const archivedChats = await this.db.chat.count({
+      where: { can_send_messages: false },
+    });
     const activeChats = totalChats - archivedChats;
 
-    // Get top participants
+    // Get top participants (exclude system/announcement messages with null userId)
     const topParticipants = await this.db.message.groupBy({
       by: ['userId'],
-      _count: true,
+      where: { userId: { not: null } },
+      _count: { _all: true },
       orderBy: { _count: { userId: 'desc' } },
       take: 5,
     });
 
-    const participantDetails = await Promise.all(
-      topParticipants.map(async (p: any) => {
-        const user = await this.db.user.findUnique({
-          where: { id: p.userId },
-          select: { id: true, username: true },
-        });
-        return {
-          userId: p.userId,
-          username: user?.username || 'Unknown',
-          messageCount: p._count,
-        };
-      }),
-    );
+    const userIds = topParticipants
+      .map((p) => p.userId)
+      .filter((id): id is string => Boolean(id));
 
-    // Get messages per day
-    const messagesPerDay = totalMessages > 0 ? Math.round(totalMessages / 30) : 0;
+    const users =
+      userIds.length > 0
+        ? await this.db.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, username: true },
+          })
+        : [];
+
+    const usernameById = new Map(users.map((u) => [u.id, u.username]));
+
+    const participantDetails = topParticipants
+      .filter((p) => p.userId)
+      .map((p) => ({
+        userId: p.userId as string,
+        username: usernameById.get(p.userId as string) || 'Unknown',
+        messageCount:
+          typeof p._count === 'number' ? p._count : p._count?._all || 0,
+      }));
+
+    const messagesPerDay =
+      totalMessages > 0 ? Math.round(totalMessages / 30) : 0;
 
     this.logger.log(`Retrieved chat statistics`, 'AdminChatManagementService');
 

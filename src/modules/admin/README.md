@@ -41,7 +41,7 @@ Complete reference for the Zee Love admin dashboard / back-office.
 | Field | Value |
 |-------|--------|
 | Email | `admin@milove.com` |
-| Password | `adminMiLove` |
+| Password | `adminMilove` |
 
 Re-seed anytime:
 
@@ -57,7 +57,7 @@ node scripts/seed-admin.js
 POST /admin/auth/login
 Content-Type: application/json
 
-{ "email": "admin@milove.com", "password": "adminMiLove" }
+{ "email": "admin@milove.com", "password": "adminMilove" }
 ```
 
 Use returned `access_token` as Bearer token for all admin routes.
