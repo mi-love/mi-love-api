@@ -17,6 +17,7 @@ import { NotificationModule } from './modules/notifications/notification.module'
 import { StreamModule } from './modules/streams/stream.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { QueueModule } from './queue/queue.module';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -43,7 +44,7 @@ import { QueueModule } from './queue/queue.module';
     AdminModule,
     QueueModule,
   ],
-  controllers: [],
+  controllers: [AppController],
   providers: [],
 })
 export class AppModule {}

@@ -24,7 +24,7 @@
     "db:reset": " prisma migrate reset && yarn run db:push",
     "dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start": "node dist/main",
+    "start": "npx prisma migrate deploy && node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
