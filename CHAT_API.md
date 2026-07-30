@@ -17,12 +17,13 @@ Related: [FRONTEND_INTEGRATION.md](./FRONTEND_INTEGRATION.md) · [ADMIN_API.md](
 
 1. [Socket auth (React Native)](#1-socket-auth-react-native)
 2. [Socket events](#2-socket-events)
-3. [Reply to messages](#3-reply-to-messages)
-4. [Emoji reactions](#4-emoji-reactions)
-5. [Other REST endpoints](#5-other-rest-endpoints)
-6. [Validation & errors](#6-validation--errors)
-7. [Acceptance checklist](#7-acceptance-checklist)
-8. [Mobile file map](#8-mobile-file-map)
+3. [Group chats](#3-group-chats)
+4. [Reply to messages](#4-reply-to-messages)
+5. [Emoji reactions](#5-emoji-reactions)
+6. [Other REST endpoints](#6-other-rest-endpoints)
+7. [Validation & errors](#7-validation--errors)
+8. [Acceptance checklist](#8-acceptance-checklist)
+9. [Mobile file map](#9-mobile-file-map)
 
 ---
 
@@ -76,7 +77,11 @@ const socket = io(`${API_BASE_URL}/chat`, {
 | Direction | Event | Payload |
 |-----------|--------|---------|
 | C → S | `private-message` | `{ toUserId, message?, fileId?, replyToMessageId? }` |
-| S → C | `private-message` | Echo to **sender and recipient** (see below) |
+| S → C | `private-message` | Echo to **sender and recipient** (DMs) |
+| C → S | `join-chat` | `{ chatId }` (group room) |
+| C → S | `leave-chat` | `{ chatId }` |
+| C → S | `chat-message` | `{ chatId, message?, fileId?, replyToMessageId? }` |
+| S → C | `chat-message` | Group broadcast (includes `chatId`) |
 | C → S | `message-reaction` | `{ messageId, emoji }` or `{ messageId, emoji: null }` |
 | S → C | `message-reaction-updated` | `{ chatId, messageId, reactions, actorUserId }` |
 | S → C | `error` | `{ message: string }` |
@@ -87,7 +92,97 @@ Naming: mobile accepts camelCase or snake_case (`messageId` / `id`, `replyToMess
 
 ---
 
-## 3. Reply to messages
+## 3. Group chats
+
+### Create group
+
+```http
+POST /chats/groups
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+```json
+{
+  "name": "Tech Group",
+  "memberIds": ["user-id-1", "user-id-2"],
+  "avatarFileId": "optional-file-id"
+}
+```
+
+| Field | Required | Notes |
+|-------|----------|--------|
+| `name` | yes | 1–80 chars |
+| `memberIds` | yes | At least one **other** friend (creator is auto-added as `owner`) |
+| `avatarFileId` | no | From `POST /upload` |
+
+**Response `201`**
+
+```json
+{
+  "message": "Group created",
+  "data": {
+    "id": "chat-uuid",
+    "type": "group",
+    "name": "Tech Group",
+    "avatar": { "url": "https://..." },
+    "memberCount": 3,
+    "can_send_messages": true,
+    "participants": [
+      {
+        "role": "owner",
+        "user": {
+          "id": "...",
+          "username": "you",
+          "first_name": "...",
+          "last_name": "...",
+          "profile_picture": { "url": "..." }
+        }
+      }
+    ],
+    "messages": [],
+    "created_at": "...",
+    "updated_at": "..."
+  }
+}
+```
+
+Rules: members must be **friends**; duplicates ignored; creator is always included.
+
+### Add members
+
+```http
+POST /chats/:chatId/members
+```
+
+```json
+{ "memberIds": ["user-id-3"] }
+```
+
+Allowed: group **owner** or **admin**. Returns updated chat (`data`).
+
+### Get chat by id
+
+```http
+GET /chats/:chatId
+```
+
+Returns `{ data: ApiChat }` with `type`, `name`, `avatar`, `memberCount`, `participants`.
+
+### Group realtime
+
+1. Client emits `join-chat` with `{ chatId }` when opening a group room  
+2. Send with `chat-message` `{ chatId, message?, fileId?, replyToMessageId? }`  
+3. Server broadcasts `chat-message` (includes `chatId`) to the room + online participants  
+4. On leave: `leave-chat`
+
+DMs still use `private-message` / `toUserId`.
+
+`GET /chats` includes groups with `type: "group"` so the list can show the group name/avatar.
+
+---
+
+## 4. Reply to messages
 
 ### Goals
 
@@ -252,7 +347,7 @@ Notes:
 
 ---
 
-## 4. Emoji reactions
+## 5. Emoji reactions
 
 Allowed set: `👍` `❤️` `😂` `😮` `😢` `🙏`  
 
@@ -345,22 +440,29 @@ Broadcast includes the actor (for sync). Prefer REST when offline.
 
 ---
 
-## 5. Other REST endpoints
+## 6. Other REST endpoints
 
 | Method | Path | Notes |
 |--------|------|--------|
-| `GET` | `/chats` | List chats (paginated) |
+| `GET` | `/chats` | List chats (paginated; includes `type` / group fields) |
+| `GET` | `/chats/:chatId` | Single chat detail |
 | `GET` | `/chats/:chatId/messages` | History + replyTo + reactions |
-| `POST` | `/chats/send-message` | Send (REST fallback) |
+| `POST` | `/chats/groups` | Create group |
+| `POST` | `/chats/:chatId/members` | Add group members |
+| `POST` | `/chats/send-message` | Send (REST fallback; groups via `chatId`) |
 | `POST` | `/chats/messages/:messageId/reactions` | Add/change reaction |
 | `DELETE` | `/chats/messages/:messageId/reactions` | Remove reaction |
 
 ---
 
-## 6. Validation & errors
+## 7. Validation & errors
 
 | Case | Behavior |
 |------|----------|
+| `POST /chats/groups` missing | Was `404` — now implemented |
+| Non-friend in `memberIds` | `403` |
+| Empty `memberIds` / no other members | `400` |
+| Add members without owner/admin | `403` |
 | Reply to message in another chat | `400` |
 | Reply to deleted message | `400` |
 | Reply to announcement | `403` |
@@ -385,7 +487,7 @@ Socket errors: `error` event with `{ "message": "..." }`.
 
 ---
 
-## 7. Acceptance checklist
+## 8. Acceptance checklist
 
 ### Replies
 
@@ -410,9 +512,17 @@ Socket errors: `error` event with `{ "message": "..." }`.
 - [x] Accept `handshake.headers.authorization`
 - [x] Accept `handshake.auth.token` / `handshake.auth.authorization` (React Native)
 
+### Group chats
+
+- [x] `POST /chats/groups`
+- [x] `POST /chats/:chatId/members`
+- [x] `GET /chats/:chatId`
+- [x] `type` / `name` / `avatar` / `memberCount` on list + detail
+- [x] Socket `join-chat` / `leave-chat` / `chat-message`
+
 ---
 
-## 8. Mobile file map
+## 9. Mobile file map
 
 Wire against:
 

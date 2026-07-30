@@ -1,5 +1,10 @@
 # Chats module
 
-See the full mobile/backend contract:
+Full contract: **[CHAT_API.md](../../CHAT_API.md)**
 
-**[CHAT_API.md](../../CHAT_API.md)** — Socket.IO auth (React Native), replies, reactions, REST + events.
+| Method | Path / event | Notes |
+|--------|----------------|--------|
+| `POST` | `/chats/groups` | Create group |
+| `POST` | `/chats/:chatId/members` | Add members (owner/admin) |
+| `GET` | `/chats/:chatId` | Chat detail |
+| Socket | `join-chat` / `leave-chat` / `chat-message` | Group realtime |

@@ -15,7 +15,12 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { User } from '@/common/decorator/user.decorator';
 import { UserWithoutPassword } from '@/common/types/db';
-import { MessageReactionDto, SendMessageDto } from './chat.dto';
+import {
+  AddGroupMembersDto,
+  CreateGroupDto,
+  MessageReactionDto,
+  SendMessageDto,
+} from './chat.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('chats')
@@ -32,7 +37,13 @@ export class ChatController {
     @Body() body: SendMessageDto,
   ) {
     const result = await this.chatService.sendMessage(user.id, body);
-    if (result.recipientId) {
+    if (result.isGroup) {
+      this.chatGateway.emitGroupMessage(
+        result.chatId,
+        result.socketPayload,
+        result.participantUserIds,
+      );
+    } else if (result.recipientId) {
       this.chatGateway.emitPrivateMessage(
         user.id,
         result.recipientId,
@@ -40,6 +51,16 @@ export class ChatController {
       );
     }
     return { data: result.data };
+  }
+
+  /** Create a group chat — must be before `:chatId` routes. */
+  @Post('groups')
+  @HttpCode(HttpStatus.CREATED)
+  createGroup(
+    @User() user: UserWithoutPassword,
+    @Body() body: CreateGroupDto,
+  ) {
+    return this.chatService.createGroup(user.id, body);
   }
 
   @Post('messages/:messageId/reactions')
@@ -86,6 +107,23 @@ export class ChatController {
     @Query('limit') limit: string = '10',
   ) {
     return this.chatService.getChats(user.id, { page, limit });
+  }
+
+  @Get(':chatId')
+  getChatById(
+    @User() user: UserWithoutPassword,
+    @Param('chatId') chatId: string,
+  ) {
+    return this.chatService.getChatById(user.id, chatId);
+  }
+
+  @Post(':chatId/members')
+  addMembers(
+    @User() user: UserWithoutPassword,
+    @Param('chatId') chatId: string,
+    @Body() body: AddGroupMembersDto,
+  ) {
+    return this.chatService.addGroupMembers(user.id, chatId, body.memberIds);
   }
 
   @Get(':chatId/messages')

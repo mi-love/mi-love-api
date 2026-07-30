@@ -193,8 +193,9 @@ export class ChatService {
   }
 
   async findOrCreateDirectChat(fromUserId: string, toUserId: string) {
-    let chat = await this.db.chat.findFirst({
+    const existing = await this.db.chat.findFirst({
       where: {
+        type: 'direct',
         AND: [
           { participants: { some: { userId: fromUserId } } },
           { participants: { some: { userId: toUserId } } },
@@ -203,18 +204,278 @@ export class ChatService {
       include: { participants: true },
     });
 
-    if (!chat) {
-      chat = await this.db.chat.create({
-        data: {
-          participants: {
-            create: [{ userId: fromUserId }, { userId: toUserId }],
+    // Prefer a true 1:1 DM (exactly two participants)
+    if (existing && existing.participants.length === 2) {
+      return existing;
+    }
+
+    return this.db.chat.create({
+      data: {
+        type: 'direct',
+        participants: {
+          create: [
+            { userId: fromUserId, role: 'member' },
+            { userId: toUserId, role: 'member' },
+          ],
+        },
+      },
+      include: { participants: true },
+    });
+  }
+
+  private formatChat(chat: {
+    id: string;
+    type: string;
+    name: string | null;
+    can_send_messages: boolean;
+    created_at: Date;
+    updated_at: Date;
+    avatar?: { url: string } | null;
+    participants: Array<{
+      role?: string;
+      user: {
+        id: string;
+        username: string;
+        first_name: string;
+        last_name: string;
+        profile_picture: { url: string } | null;
+      };
+    }>;
+    messages?: unknown[];
+  }) {
+    return {
+      id: chat.id,
+      type: chat.type,
+      name: chat.name,
+      avatar: chat.avatar ? { url: chat.avatar.url } : null,
+      avatar_url: chat.avatar?.url ?? null,
+      memberCount: chat.participants.length,
+      member_count: chat.participants.length,
+      can_send_messages: chat.can_send_messages,
+      created_at: chat.created_at,
+      updated_at: chat.updated_at,
+      participants: chat.participants.map((p) => ({
+        role: p.role || 'member',
+        user: p.user,
+      })),
+      messages: chat.messages || [],
+      last_message: Array.isArray(chat.messages) ? chat.messages[0] : undefined,
+    };
+  }
+
+  private async loadChatForResponse(chatId: string) {
+    return this.db.chat.findUnique({
+      where: { id: chatId },
+      include: {
+        avatar: { select: { url: true } },
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+                first_name: true,
+                last_name: true,
+                profile_picture: { select: { url: true } },
+              },
+            },
           },
         },
-        include: { participants: true },
+        messages: {
+          orderBy: { created_at: 'desc' },
+          take: 1,
+          include: {
+            user: { select: { id: true, username: true } },
+            file: true,
+          },
+        },
+      },
+    });
+  }
+
+  private async assertFriend(userId: string, otherUserId: string) {
+    const isFriend = await this.db.user.findFirst({
+      where: {
+        id: userId,
+        OR: [
+          { friends: { some: { id: otherUserId } } },
+          { my_friends: { some: { id: otherUserId } } },
+        ],
+      },
+      select: { id: true },
+    });
+    return Boolean(isFriend);
+  }
+
+  async createGroup(
+    userId: string,
+    body: { name: string; memberIds: string[]; avatarFileId?: string },
+  ) {
+    const name = body.name?.trim();
+    if (!name) {
+      throw new BadRequestException({ message: 'Group name is required' });
+    }
+
+    const uniqueMemberIds = [...new Set(body.memberIds.filter(Boolean))];
+    const memberIds = uniqueMemberIds.filter((id) => id !== userId);
+
+    if (!memberIds.length) {
+      throw new BadRequestException({
+        message: 'Add at least one other member',
       });
     }
 
-    return chat;
+    const users = await this.db.user.findMany({
+      where: { id: { in: memberIds } },
+      select: { id: true },
+    });
+    if (users.length !== memberIds.length) {
+      throw new BadRequestException({
+        message: 'One or more members were not found',
+      });
+    }
+
+    for (const memberId of memberIds) {
+      const ok = await this.assertFriend(userId, memberId);
+      if (!ok) {
+        throw new ForbiddenException({
+          message: 'You can only add friends to a group',
+        });
+      }
+    }
+
+    if (body.avatarFileId) {
+      const file = await this.db.file.findUnique({
+        where: { id: body.avatarFileId },
+        select: { id: true },
+      });
+      if (!file) {
+        throw new BadRequestException({ message: 'Invalid avatarFileId' });
+      }
+    }
+
+    const chat = await this.db.chat.create({
+      data: {
+        type: 'group',
+        name,
+        avatarId: body.avatarFileId || null,
+        participants: {
+          create: [
+            { userId, role: 'owner' },
+            ...memberIds.map((id) => ({
+              userId: id,
+              role: 'member' as const,
+            })),
+          ],
+        },
+        messages: {
+          create: {
+            type: 'announcement',
+            content: `${name} was created`,
+            userId: null,
+          },
+        },
+      },
+    });
+
+    const full = await this.loadChatForResponse(chat.id);
+    return {
+      message: 'Group created',
+      data: this.formatChat(full!),
+    };
+  }
+
+  async addGroupMembers(
+    userId: string,
+    chatId: string,
+    memberIds: string[],
+  ) {
+    const chat = await this.db.chat.findFirst({
+      where: {
+        id: chatId,
+        type: 'group',
+        participants: { some: { userId } },
+      },
+      include: { participants: true },
+    });
+
+    if (!chat) {
+      throw new NotFoundException({ message: 'Group chat not found' });
+    }
+
+    const actor = chat.participants.find((p) => p.userId === userId);
+    if (!actor || (actor.role !== 'owner' && actor.role !== 'admin')) {
+      throw new ForbiddenException({
+        message: 'Only group owners or admins can add members',
+      });
+    }
+
+    const existing = new Set(chat.participants.map((p) => p.userId));
+    const toAdd = [...new Set(memberIds.filter(Boolean))].filter(
+      (id) => id !== userId && !existing.has(id),
+    );
+
+    if (!toAdd.length) {
+      throw new BadRequestException({
+        message: 'No new members to add',
+      });
+    }
+
+    const users = await this.db.user.findMany({
+      where: { id: { in: toAdd } },
+      select: { id: true },
+    });
+    if (users.length !== toAdd.length) {
+      throw new BadRequestException({
+        message: 'One or more members were not found',
+      });
+    }
+
+    for (const memberId of toAdd) {
+      const ok = await this.assertFriend(userId, memberId);
+      if (!ok) {
+        throw new ForbiddenException({
+          message: 'You can only add friends to a group',
+        });
+      }
+    }
+
+    await this.db.$transaction([
+      this.db.participant.createMany({
+        data: toAdd.map((id) => ({
+          chatId,
+          userId: id,
+          role: 'member',
+        })),
+      }),
+      this.db.message.create({
+        data: {
+          chatId,
+          type: 'announcement',
+          content: `${toAdd.length} member(s) joined the group`,
+          userId: null,
+        },
+      }),
+      this.db.chat.update({
+        where: { id: chatId },
+        data: { updated_at: new Date() },
+      }),
+    ]);
+
+    const full = await this.loadChatForResponse(chatId);
+    return {
+      message: 'Members added',
+      data: this.formatChat(full!),
+    };
+  }
+
+  async getChatById(userId: string, chatId: string) {
+    await this.assertChatParticipant(userId, chatId);
+    const full = await this.loadChatForResponse(chatId);
+    if (!full) {
+      throw new NotFoundException({ message: 'Chat not found' });
+    }
+    return { data: this.formatChat(full) };
   }
 
   async sendMessage(userId: string, body: SendMessageDto) {
@@ -283,9 +544,12 @@ export class ChatService {
       }
 
       chat = await this.findOrCreateDirectChat(userId, recipientId);
-    } else {
+    } else if (chat.type === 'direct') {
       const other = chat.participants.find((p) => p.userId !== userId);
       recipientId = other?.userId;
+    } else {
+      // Group chat — broadcast to room; no single DM recipient
+      recipientId = undefined;
     }
 
     if (!chat.can_send_messages) {
@@ -355,23 +619,43 @@ export class ChatService {
       return created;
     });
 
-    if (recipientId) {
-      const truncateText = (text: string, maxLength: number) =>
-        text.length <= maxLength ? text : `${text.slice(0, maxLength)}...`;
+    const truncateText = (text: string, maxLength: number) =>
+      text.length <= maxLength ? text : `${text.slice(0, maxLength)}...`;
+    const notifBody = message?.trim()
+      ? truncateText(message.trim(), 100)
+      : 'Sent a file';
+    const notifImage =
+      savedMessage.file?.url || fromUser.profile_picture?.url || undefined;
 
+    const otherParticipantIds = chat.participants
+      .map((p) => p.userId)
+      .filter((id) => id !== userId);
+
+    if (chat.type === 'group') {
+      for (const uid of otherParticipantIds) {
+        this.notificationService
+          .sendNotification({
+            title: `${fromUser.username} in ${chat.name || 'group'}`,
+            message: notifBody,
+            type: 'message',
+            userId: uid,
+            image: notifImage,
+          })
+          .catch(() => undefined);
+      }
+    } else if (recipientId) {
       this.notificationService
         .sendNotification({
           title: `New message from ${fromUser.username}`,
-          message: message?.trim()
-            ? truncateText(message.trim(), 100)
-            : 'Sent a file',
+          message: notifBody,
           type: 'message',
           userId: recipientId,
-          image:
-            savedMessage.file?.url || fromUser.profile_picture?.url || undefined,
+          image: notifImage,
         })
         .catch(() => undefined);
     }
+
+    const basePayload = this.toSocketPayload(savedMessage, fromUser.username);
 
     return {
       data: {
@@ -389,8 +673,14 @@ export class ChatService {
         updated_at: savedMessage.updated_at,
         user: savedMessage.user,
       },
-      recipientId,
-      socketPayload: this.toSocketPayload(savedMessage, fromUser.username),
+      recipientId: chat.type === 'direct' ? recipientId : undefined,
+      isGroup: chat.type === 'group',
+      chatId: chat.id,
+      participantUserIds: chat.participants.map((p) => p.userId),
+      socketPayload:
+        chat.type === 'group'
+          ? { ...basePayload, chatId: chat.id }
+          : basePayload,
     };
   }
 
@@ -444,6 +734,7 @@ export class ChatService {
         },
       },
       include: {
+        avatar: { select: { url: true } },
         participants: {
           include: {
             user: {
@@ -452,7 +743,7 @@ export class ChatService {
                 username: true,
                 first_name: true,
                 last_name: true,
-                profile_picture: true,
+                profile_picture: { select: { url: true } },
               },
             },
           },
@@ -491,7 +782,7 @@ export class ChatService {
     });
 
     return {
-      data: chats,
+      data: chats.map((c) => this.formatChat(c)),
       meta: this.paginationUtils.getMeta({ totalItems: total, ...pagination }),
     };
   }

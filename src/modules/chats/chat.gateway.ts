@@ -82,6 +82,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.logger.log(`Disconnected client: ${client.id}, user: ${user?.email}`);
   }
 
+  private chatRoom(chatId: string) {
+    return `chat:${chatId}`;
+  }
+
   emitPrivateMessage(
     fromUserId: string,
     toUserId: string,
@@ -94,6 +98,21 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     );
     for (const socketId of targets) {
       this.server.to(socketId).emit('private-message', payload);
+    }
+  }
+
+  /** Emit to Socket.IO room + any online participants (covers clients not in room yet). */
+  emitGroupMessage(
+    chatId: string,
+    payload: Record<string, unknown>,
+    participantUserIds: string[],
+  ) {
+    this.server.to(this.chatRoom(chatId)).emit('chat-message', payload);
+    for (const userId of participantUserIds) {
+      const socketId = this.users.get(userId);
+      if (socketId) {
+        this.server.to(socketId).emit('chat-message', payload);
+      }
     }
   }
 
@@ -110,11 +129,98 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       reactions: params.reactions,
       actorUserId: params.actorUserId,
     };
+    this.server
+      .to(this.chatRoom(params.chatId))
+      .emit('message-reaction-updated', payload);
     for (const userId of params.participantUserIds) {
       const socketId = this.users.get(userId);
       if (socketId) {
         this.server.to(socketId).emit('message-reaction-updated', payload);
       }
+    }
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('join-chat')
+  async handleJoinChat(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { chatId: string },
+  ): Promise<void> {
+    const user = client.data.user as UserWithoutPassword;
+    try {
+      if (!data?.chatId) {
+        client.emit('error', { message: 'chatId is required' });
+        return;
+      }
+      await this.chatService.assertChatParticipant(user.id, data.chatId);
+      await client.join(this.chatRoom(data.chatId));
+      this.logger.log(
+        `User ${user.id} joined room ${this.chatRoom(data.chatId)}`,
+      );
+    } catch (err: any) {
+      const message =
+        err?.response?.message || err?.message || 'Failed to join chat';
+      client.emit('error', {
+        message: Array.isArray(message) ? message.join(', ') : message,
+      });
+    }
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('leave-chat')
+  async handleLeaveChat(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { chatId: string },
+  ): Promise<void> {
+    if (!data?.chatId) return;
+    await client.leave(this.chatRoom(data.chatId));
+  }
+
+  @UseGuards(WsAuthGuard)
+  @SubscribeMessage('chat-message')
+  async handleGroupMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    data: {
+      chatId: string;
+      message?: string;
+      fileId?: string;
+      replyToMessageId?: string;
+    },
+  ): Promise<void> {
+    const fromUser = client.data.user as UserWithoutPassword;
+
+    try {
+      if (!data?.chatId) {
+        client.emit('error', { message: 'chatId is required' });
+        return;
+      }
+
+      const result = await this.chatService.sendMessage(fromUser.id, {
+        chatId: data.chatId,
+        message: data.message,
+        fileId: data.fileId,
+        replyToMessageId: data.replyToMessageId,
+      });
+
+      if (!result.isGroup) {
+        client.emit('error', {
+          message: 'chat-message is only for group chats; use private-message',
+        });
+        return;
+      }
+
+      this.emitGroupMessage(
+        result.chatId,
+        result.socketPayload,
+        result.participantUserIds,
+      );
+    } catch (err: any) {
+      const message =
+        err?.response?.message || err?.message || 'Failed to send message';
+      client.emit('error', {
+        message: Array.isArray(message) ? message.join(', ') : message,
+      });
     }
   }
 
@@ -270,26 +376,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    let chat = await this.db.chat.findFirst({
-      where: {
-        AND: [
-          { participants: { some: { userId: fromUser.id } } },
-          { participants: { some: { userId: data.toUserId } } },
-        ],
-      },
-      include: { participants: true },
-    });
-
-    if (!chat) {
-      chat = await this.db.chat.create({
-        data: {
-          participants: {
-            create: [{ userId: fromUser.id }, { userId: data.toUserId }],
-          },
-        },
-        include: { participants: true },
-      });
-    }
+    const chat = await this.chatService.findOrCreateDirectChat(
+      fromUser.id,
+      data.toUserId,
+    );
 
     await this.db.message.create({
       data: {
