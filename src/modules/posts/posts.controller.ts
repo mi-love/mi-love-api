@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   Put,
@@ -12,7 +14,12 @@ import {
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
-import { createPostDto, getPostsDto, updatePostDto } from './posts.dto';
+import {
+  createCommentDto,
+  createPostDto,
+  getPostsDto,
+  updatePostDto,
+} from './posts.dto';
 import { Request } from 'express';
 import { PaginationParams } from '@/common/services/pagination.service';
 
@@ -39,9 +46,46 @@ export class PostsController {
     });
   }
 
+  @Get('/:id/comments')
+  async getPostComments(
+    @Param('id') id: string,
+    @Query() query: PaginationParams & { order?: 'asc' | 'desc' },
+    @Req() req: Request,
+  ) {
+    return this.postsService.getPostComments(id, req.user.id, query);
+  }
+
+  @Post('/:id/comments')
+  @HttpCode(HttpStatus.CREATED)
+  async createComment(
+    @Param('id') id: string,
+    @Body() body: createCommentDto,
+    @Req() req: Request,
+  ) {
+    return this.postsService.createComment({
+      postId: id,
+      userId: req.user.id,
+      body,
+      username: req.user.username,
+    });
+  }
+
+  @Delete('/:id/comments/:commentId')
+  async deleteComment(
+    @Param('id') id: string,
+    @Param('commentId') commentId: string,
+    @Req() req: Request,
+  ) {
+    return this.postsService.deleteComment({
+      postId: id,
+      commentId,
+      userId: req.user.id,
+    });
+  }
+
   @Get('/:id')
-  async getPostById(@Param('id') id: string) {
-    return await this.postsService.getPostById(id);
+  async getPostById(@Param('id') id: string, @Req() req: Request) {
+    return await this.postsService.getPostById(id, req.user.id);
   }
 
   @Delete('/:id')
@@ -77,74 +121,8 @@ export class PostsController {
   async getPostLikes(
     @Param('id') id: string,
     @Query() query: PaginationParams,
+    @Req() req: Request,
   ) {
-    return this.postsService.getPostLikes(id, query);
+    return this.postsService.getPostLikes(id, query, req.user.id);
   }
-
-  // NOT A FEATURE YET
-  // @Post('/:id/comment')
-  // async createComment(
-  //   @Param('id') id: string,
-  //   @Body() body: createCommentDto,
-  //   @Req() req: Request,
-  // ) {
-  //   return this.postsService.createComment({
-  //     postId: id,
-  //     userId: req.user.id,
-  //     content: body.content,
-  //   });
-  // }
-
-  // @Post('/:id/comment/:commentId/like')
-  // async likeComment(
-  //   @Param('id') id: string,
-  //   @Param('commentId') commentId: string,
-  //   @Req() req: Request,
-  // ) {
-  //   return this.postsService.likeComment({
-  //     commentId,
-  //     userId: req.user.id,
-  //   });
-  // }
-
-  // @Post('/:id/comment/:commentId/unlike')
-  // async unlikeComment(
-  //   @Param('id') id: string,
-  //   @Param('commentId') commentId: string,
-  //   @Req() req: Request,
-  // ) {
-  //   return this.postsService.unlikeComment({
-  //     commentId,
-  //     userId: req.user.id,
-  //   });
-  // }
-
-  // @Get('/:id/comment/:commentId/likes')
-  // async getCommentLikes(
-  //   @Param('id') id: string,
-  //   @Param('commentId') commentId: string,
-  //   @Query() query: PaginationParams,
-  // ) {
-  //   return this.postsService.getCommentLikes(commentId, query);
-  // }
-
-  // @Get('/:id/comment/:commentId/comments')
-  // async getPostComments(
-  //   @Param('id') id: string,
-  //   @Query() query: PaginationParams,
-  // ) {
-  //   return this.postsService.getPostComments(id, query);
-  // }
-
-  // @Delete('/:id/comment/:commentId')
-  // async deleteComment(
-  //   @Param('id') id: string,
-  //   @Param('commentId') commentId: string,
-  //   @Req() req: Request,
-  // ) {
-  //   return this.postsService.deleteComment({
-  //     id: commentId,
-  //     userId: req.user.id,
-  //   });
-  // }
 }

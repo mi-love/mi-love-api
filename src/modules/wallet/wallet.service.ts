@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable, NotFoundException } from '@nestjs/common';
 import { sendGiftDto, WalletDto, DeductDto } from './wallet.dto';
 import { UserWithoutPassword } from '@/common/types/db';
 import { DbService } from '@/database/database.service';
@@ -13,14 +13,85 @@ import {
 const PAYSTACK_PREFIX = 'paystack-';
 const FLUTTERWAVE_PREFIX = 'tx-';
 const CHECKOUT_EXPIRY_MS = 15 * 60 * 1000; // 15 minutes
+const DEFAULT_APP_CALLBACK = 'zeelove://payment/callback';
 
 export type PaymentProviderChoice = 'paystack' | 'flutterwave';
+export type PaymentCallbackStatus =
+  | 'success'
+  | 'failed'
+  | 'cancelled'
+  | 'pending';
 
 export interface CheckoutTokenPayload {
   sub: string;
   amount: number;
   email: string;
   name: string;
+  callbackUrl?: string | null;
+}
+
+function normalizeAppCallbackUrl(callbackUrl?: string | null): string {
+  if (callbackUrl?.trim()) {
+    return callbackUrl.trim().replace(/\/$/, '');
+  }
+  const scheme = process.env.EXPO_SCHEME?.trim();
+  if (scheme) {
+    const base = scheme.includes('://')
+      ? scheme.replace(/\/$/, '')
+      : `${scheme}://`;
+    return `${base}/payment/callback`.replace(':///', '://');
+  }
+  return DEFAULT_APP_CALLBACK;
+}
+
+function buildServerCallbackUrl(appCallbackUrl: string): string {
+  const baseUrl = (process.env.BASE_URL || '').replace(/\/$/, '');
+  const url = new URL(`${baseUrl}/wallet/callback`);
+  url.searchParams.set('app_callback', appCallbackUrl);
+  return url.toString();
+}
+
+function mapGatewayStatus(
+  status?: string,
+  verifiedSuccess?: boolean,
+): PaymentCallbackStatus {
+  if (verifiedSuccess) return 'success';
+  const normalized = (status || '').toLowerCase();
+  if (['success', 'successful', 'completed', 'paid'].includes(normalized)) {
+    return 'success';
+  }
+  if (['cancelled', 'canceled', 'abandoned'].includes(normalized)) {
+    return 'cancelled';
+  }
+  if (['pending', 'processing', 'ongoing'].includes(normalized)) {
+    return 'pending';
+  }
+  return 'failed';
+}
+
+function buildAppPaymentRedirect(params: {
+  callbackUrl: string;
+  status: PaymentCallbackStatus;
+  transactionId?: string;
+  reference?: string;
+  amount?: number;
+  message?: string;
+}): string {
+  const url = new URL(params.callbackUrl);
+  url.searchParams.set('status', params.status);
+  if (params.transactionId) {
+    url.searchParams.set('transactionId', params.transactionId);
+  }
+  if (params.reference) {
+    url.searchParams.set('reference', params.reference);
+  }
+  if (params.amount != null && !Number.isNaN(params.amount)) {
+    url.searchParams.set('amount', String(params.amount));
+  }
+  if (params.message) {
+    url.searchParams.set('message', params.message);
+  }
+  return url.toString();
 }
 
 @Injectable()
@@ -58,30 +129,12 @@ export class WalletService {
       });
     }
 
-    // const isFriend = await this.db.user.findUnique({
-    //   where: {
-    //     id: user.id,
-    //     my_friends: {
-    //       some: {
-    //         id: receiverId,
-    //       },
-    //     },
-    //   },
-    // });
-
-    // if (!isFriend) {
-    //   throw new BadGatewayException({
-    //     message: 'You can only send gifts to friends',
-    //   });
-    // }
-
     const wallet = await this.db.wallet.findUnique({
       where: {
         id: user.walletId,
       },
     });
 
-    // console.log(wallet?.balance, gift.points);
     if (Number(wallet?.balance ?? '0') < Number(gift.points)) {
       throw new BadGatewayException({
         message: 'Insufficient balance',
@@ -141,7 +194,6 @@ export class WalletService {
         },
       });
     });
-    // TODO[] send notification
     return {
       message: 'Gift sent successfully',
     };
@@ -211,12 +263,14 @@ export class WalletService {
 
     const baseUrl = process.env.BASE_URL || '';
     const provider = walletDto.provider;
+    const appCallbackUrl = normalizeAppCallbackUrl(walletDto.callbackUrl);
 
     if (!provider) {
       const session = await this.db.checkout_session.create({
         data: {
           amount: walletDto.amount,
           userId: user.id,
+          callbackUrl: appCallbackUrl,
         },
       });
       const checkoutLink = `${baseUrl}/wallet/checkout?token=${session.id}`;
@@ -224,10 +278,11 @@ export class WalletService {
         message: 'Checkout link created. Complete payment on the page.',
         link: checkoutLink,
         amount: walletDto.amount,
+        callbackUrl: appCallbackUrl,
       };
     }
 
-    const callbackUrl = `${baseUrl}/wallet/callback`;
+    const callbackUrl = buildServerCallbackUrl(appCallbackUrl);
 
     if (provider === 'paystack') {
       const id = `${PAYSTACK_PREFIX}${nanoid()}`;
@@ -236,7 +291,7 @@ export class WalletService {
         amount: walletDto.amount,
         reference: id,
         callback_url: callbackUrl,
-        metadata: { userId: user.id },
+        metadata: { userId: user.id, callbackUrl: appCallbackUrl },
       });
 
       if ('error' in paystackResult) {
@@ -266,6 +321,10 @@ export class WalletService {
         message: 'Payment link created successfully',
         link: paystackResult.authorization_url,
         provider: 'paystack',
+        transactionId: id,
+        reference: id,
+        amount: walletDto.amount,
+        callbackUrl: appCallbackUrl,
       };
     }
 
@@ -277,6 +336,7 @@ export class WalletService {
       phonenumber: user.phone_number ?? '',
       tx_ref: id,
       currency: 'USD',
+      redirect_url: callbackUrl,
     });
 
     if (!payment || !payment.data?.link) {
@@ -306,6 +366,10 @@ export class WalletService {
       message: 'Payment link created successfully',
       link: payment.data.link,
       provider: 'flutterwave',
+      transactionId: id,
+      reference: id,
+      amount: walletDto.amount,
+      callbackUrl: appCallbackUrl,
     };
   }
 
@@ -322,6 +386,7 @@ export class WalletService {
       amount: session.amount,
       email: session.user.email,
       name: `${session.user.first_name} ${session.user.last_name}`.trim(),
+      callbackUrl: session.callbackUrl,
     };
   }
 
@@ -428,7 +493,8 @@ export class WalletService {
       throw new BadGatewayException({ message: 'User not found' });
     }
 
-    const callbackUrl = `${process.env.BASE_URL || ''}/wallet/callback`;
+    const appCallbackUrl = normalizeAppCallbackUrl(payload.callbackUrl);
+    const callbackUrl = buildServerCallbackUrl(appCallbackUrl);
     const { amount } = payload;
 
     if (provider === 'paystack') {
@@ -438,7 +504,7 @@ export class WalletService {
         amount,
         reference: id,
         callback_url: callbackUrl,
-        metadata: { userId: user.id },
+        metadata: { userId: user.id, callbackUrl: appCallbackUrl },
       });
       if ('error' in result) {
         throw new BadGatewayException({
@@ -468,6 +534,7 @@ export class WalletService {
       phonenumber: user.phone_number ?? '',
       tx_ref: id,
       currency: 'USD',
+      redirect_url: callbackUrl,
     });
     if (!payment?.data?.link) {
       throw new BadGatewayException({
@@ -489,30 +556,73 @@ export class WalletService {
     return payment.data.link;
   }
 
-  async walletCallback(
-    tx_ref: string,
-    status?: string,
-    transaction_id?: string,
-    reference?: string,
-  ) {
+  async walletCallback(query: {
+    tx_ref?: string;
+    status?: string;
+    transaction_id?: string;
+    reference?: string;
+    app_callback?: string;
+    message?: string;
+  }) {
+    const {
+      tx_ref,
+      status,
+      transaction_id,
+      reference,
+      app_callback,
+      message,
+    } = query;
     const ref = reference || tx_ref;
+    const appCallbackUrl = normalizeAppCallbackUrl(app_callback);
+
     if (!ref) {
-      throw new BadGatewayException({
-        message: 'Invalid transaction',
+      return buildAppPaymentRedirect({
+        callbackUrl: appCallbackUrl,
+        status: 'failed',
+        message: message || 'Invalid transaction',
       });
     }
 
     const transactionDetails = await this.db.transaction.findUnique({
       where: {
         id: ref,
-        status: {
-          not: 'success',
-        },
       },
     });
+
     if (!transactionDetails) {
-      throw new BadGatewayException({
-        message: 'Invalid transaction',
+      return buildAppPaymentRedirect({
+        callbackUrl: appCallbackUrl,
+        status: 'failed',
+        reference: ref,
+        transactionId: transaction_id || ref,
+        message: message || 'Transaction not found',
+      });
+    }
+
+    // Already finalized — still redirect to app with current status
+    if (transactionDetails.status === 'success') {
+      return buildAppPaymentRedirect({
+        callbackUrl: appCallbackUrl,
+        status: 'success',
+        transactionId: transactionDetails.id,
+        reference: ref,
+        amount: transactionDetails.amount,
+      });
+    }
+
+    const gatewayStatus = mapGatewayStatus(status);
+    if (gatewayStatus === 'cancelled') {
+      await this.db.transaction.update({
+        where: { id: ref },
+        data: { status: 'failed' },
+      });
+      return buildAppPaymentRedirect({
+        callbackUrl: appCallbackUrl,
+        status: 'cancelled',
+        transactionId: transactionDetails.id,
+        reference: ref,
+        amount: transactionDetails.amount,
+        message: message || 'Payment was cancelled',
       });
     }
 
@@ -520,46 +630,90 @@ export class WalletService {
     const isPaymentSuccessful = isPaystack
       ? await this.paystackService.verifyTransaction(ref)
       : await this.paymentService.verifyPayment(ref);
+
     if (isPaymentSuccessful) {
-      await this.db.transaction.update({
-        where: { id: ref },
+      const updated = await this.db.transaction.updateMany({
+        where: { id: ref, status: { not: 'success' } },
         data: {
           status: 'success',
+          ...(transaction_id ? { provider_ref: String(transaction_id) } : {}),
         },
       });
-      const points = Number(transactionDetails.amount * 10); // 1 USD = 10 points
-      // console.log('> Funded with ', points);
-      await this.db.user.update({
-        where: {
-          id: transactionDetails.userId,
-        },
-        data: {
-          wallet: {
-            update: {
-              balance: {
-                increment: points,
+
+      if (updated.count > 0) {
+        const points = Number(transactionDetails.amount * 10); // 1 USD = 10 points
+        await this.db.user.update({
+          where: {
+            id: transactionDetails.userId,
+          },
+          data: {
+            wallet: {
+              update: {
+                balance: {
+                  increment: points,
+                },
               },
             },
           },
-        },
-      });
+        });
+      }
 
-      console.log('Redirecting to transaction detail');
-      return `milove://payment-callback?status=successful&transaction_id=${transaction_id || ref}&reference=${ref}`;
-      // return {
-      //   message: 'Payment successful',
-      //   status: 'success',
-      // };
+      return buildAppPaymentRedirect({
+        callbackUrl: appCallbackUrl,
+        status: 'success',
+        transactionId: transactionDetails.id,
+        reference: ref,
+        amount: transactionDetails.amount,
+      });
     }
 
     await this.db.transaction.update({
-      where: { id: tx_ref },
+      where: { id: ref },
       data: {
         status: 'failed',
       },
     });
 
-    return `milove://payment-callback?status=failed&reference=${reference || ref}`;
+    return buildAppPaymentRedirect({
+      callbackUrl: appCallbackUrl,
+      status: mapGatewayStatus(status, false),
+      transactionId: transactionDetails.id,
+      reference: ref,
+      amount: transactionDetails.amount,
+      message: message || 'Payment was declined',
+    });
+  }
+
+  private formatTransaction(transaction: {
+    id: string;
+    amount: number;
+    fee: number | null;
+    type: string;
+    description: string | null;
+    status: string;
+    currency: string;
+    payment_link: string | null;
+    provider_ref: string | null;
+    created_at: Date;
+    updated_at: Date;
+    userId: string;
+  }) {
+    return {
+      id: transaction.id,
+      transactionId: transaction.id,
+      reference: transaction.id,
+      provider_ref: transaction.provider_ref,
+      amount: transaction.amount,
+      fee: transaction.fee,
+      type: transaction.type,
+      description: transaction.description,
+      status: transaction.status,
+      currency: transaction.currency,
+      payment_link: transaction.payment_link,
+      created_at: transaction.created_at,
+      updated_at: transaction.updated_at,
+      userId: transaction.userId,
+    };
   }
 
   async getTransactions(user: UserWithoutPassword, query: PaginationParams) {
@@ -576,6 +730,8 @@ export class WalletService {
         status: true,
         type: true,
         created_at: true,
+        provider_ref: true,
+        description: true,
       },
       take: limit,
       orderBy: {
@@ -584,7 +740,11 @@ export class WalletService {
     });
 
     return {
-      data: transactions,
+      data: transactions.map((tx) => ({
+        ...tx,
+        transactionId: tx.id,
+        reference: tx.id,
+      })),
       meta: this.pagination.getMeta({
         limit,
         page: query.page,
@@ -594,7 +754,7 @@ export class WalletService {
   }
 
   async getTransactionById(id: string, user: UserWithoutPassword) {
-    const transaction = await this.db.transaction.findUnique({
+    const transaction = await this.db.transaction.findFirst({
       where: {
         id,
         userId: user.id,
@@ -602,13 +762,36 @@ export class WalletService {
     });
 
     if (!transaction) {
-      throw new BadGatewayException({
+      throw new NotFoundException({
         message: 'Transaction not found',
       });
     }
 
     return {
-      data: transaction,
+      data: this.formatTransaction(transaction),
+      message: 'Transaction retrieved successfully',
+    };
+  }
+
+  async getTransactionByReference(
+    reference: string,
+    user: UserWithoutPassword,
+  ) {
+    const transaction = await this.db.transaction.findFirst({
+      where: {
+        userId: user.id,
+        OR: [{ id: reference }, { provider_ref: reference }],
+      },
+    });
+
+    if (!transaction) {
+      throw new NotFoundException({
+        message: 'Transaction not found',
+      });
+    }
+
+    return {
+      data: this.formatTransaction(transaction),
       message: 'Transaction retrieved successfully',
     };
   }

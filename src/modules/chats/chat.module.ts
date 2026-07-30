@@ -10,6 +10,6 @@ import { PaginationUtils } from '@/common/services/pagination.service';
   imports: [],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway, DbService, JwtService, PaginationUtils],
-  exports: [],
+  exports: [ChatService, ChatGateway],
 })
 export class ChatModule {}

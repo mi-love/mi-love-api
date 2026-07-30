@@ -5,7 +5,10 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
+  MinLength,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class createPostDto {
   @IsString()
@@ -42,5 +45,12 @@ export class updatePostDto {
 export class createCommentDto {
   @IsString()
   @IsNotEmpty()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @MinLength(1)
+  @MaxLength(2000)
   content: string;
+
+  @IsString()
+  @IsOptional()
+  parentId?: string;
 }

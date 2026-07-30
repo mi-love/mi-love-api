@@ -59,13 +59,15 @@ export class PaymentService {
     phonenumber,
     name,
     tx_ref,
+    redirect_url,
   }: PaymentLinkRequest) {
     try {
       const response = await this.api.post<PaymentLinkResponse>('/payments', {
         tx_ref,
         amount: String(amount),
         currency: currency || 'USD',
-        redirect_url: `${process.env.BASE_URL}/wallet/callback`,
+        redirect_url:
+          redirect_url || `${process.env.BASE_URL}/wallet/callback`,
         payment_options: 'card, banktransfer, ussd',
         customer: {
           email,

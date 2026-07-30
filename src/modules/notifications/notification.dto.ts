@@ -6,4 +6,6 @@ export class SendNotificationDto {
   message: string;
   type: notification_type;
   image?: string;
+  metadata?: Record<string, unknown>;
 }
+

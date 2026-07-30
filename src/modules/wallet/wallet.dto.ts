@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsIn, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsNumber, IsOptional, IsString, Matches } from 'class-validator';
 
 export type PaymentProvider = 'flutterwave' | 'paystack';
 
@@ -13,6 +13,18 @@ export class WalletDto {
   @IsString()
   @IsIn(['flutterwave', 'paystack'])
   provider?: PaymentProvider;
+
+  /**
+   * App deep-link for post-payment redirect.
+   * Example: zeelove://payment/callback
+   */
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\/.+/, {
+    message:
+      'callbackUrl must be a valid app deep link (e.g. zeelove://payment/callback)',
+  })
+  callbackUrl?: string;
 }
 
 export class sendGiftDto {

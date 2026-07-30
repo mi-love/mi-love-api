@@ -1,19 +1,70 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { DbService } from '@/database/database.service';
-import { createPostDto, getPostsDto, updatePostDto } from './posts.dto';
+import { createCommentDto, createPostDto, getPostsDto, updatePostDto } from './posts.dto';
 import { Prisma } from '@prisma/client';
 import { UserWithoutPassword } from '@/common/types/db';
 import {
   PaginationParams,
   PaginationUtils,
 } from '@/common/services/pagination.service';
+import { NotificationService } from '../notifications/notification.service';
+
+const commentUserSelect = {
+  id: true,
+  username: true,
+  first_name: true,
+  last_name: true,
+  profile_picture: {
+    select: { url: true },
+  },
+} as const;
 
 @Injectable()
 export class PostsService {
   constructor(
     private db: DbService,
     private paginationUtils: PaginationUtils,
+    private notificationService: NotificationService,
   ) {}
+
+  private async canViewPost(post: { userId: string; visibility: string }, viewerId: string) {
+    if (post.visibility === 'public' || post.userId === viewerId) {
+      return true;
+    }
+
+    const isFriend = await this.db.user.findFirst({
+      where: {
+        id: viewerId,
+        OR: [
+          { friends: { some: { id: post.userId } } },
+          { my_friends: { some: { id: post.userId } } },
+        ],
+      },
+      select: { id: true },
+    });
+
+    return Boolean(isFriend);
+  }
+
+  private async assertCanViewPost(postId: string, viewerId: string) {
+    const post = await this.db.post.findUnique({
+      where: { id: postId },
+      select: { id: true, userId: true, visibility: true },
+    });
+    if (!post) {
+      throw new NotFoundException({ message: 'Post not found' });
+    }
+    const allowed = await this.canViewPost(post, viewerId);
+    if (!allowed) {
+      throw new ForbiddenException({ message: 'You cannot view this post' });
+    }
+    return post;
+  }
 
   async updatePost({
     body,
@@ -63,6 +114,21 @@ export class PostsService {
     const { filterValue, filterBy, ...queryParams } = query;
     const { skip, limit } = this.paginationUtils.getPagination(queryParams);
 
+    const friendIds = (
+      await this.db.user.findUnique({
+        where: { id: user.id },
+        select: {
+          friends: { select: { id: true } },
+          my_friends: { select: { id: true } },
+        },
+      })
+    );
+    const visibleAuthorIds = new Set<string>([
+      user.id,
+      ...(friendIds?.friends.map((f) => f.id) || []),
+      ...(friendIds?.my_friends.map((f) => f.id) || []),
+    ]);
+
     const where: Prisma.postWhereInput = {
       content: {
         contains: filterValue,
@@ -76,6 +142,10 @@ export class PostsService {
             }
           : {},
       userId: filterBy == 'my' ? user.id : {},
+      OR: [
+        { visibility: 'public' },
+        { userId: { in: [...visibleAuthorIds] } },
+      ],
     };
 
     const allPosts = await this.db.post.count({
@@ -116,12 +186,10 @@ export class PostsService {
           select: {
             files: true,
             likes: true,
+            comments: { where: { deleted_at: null } },
           },
         },
       },
-      // omit: {
-      //   embeddings: true,
-      // },
       orderBy: {
         created_at: query.order == 'desc' ? 'desc' : 'asc',
       },
@@ -136,7 +204,7 @@ export class PostsService {
     };
   }
 
-  async getPostById(id: string) {
+  async getPostById(id: string, viewerId: string) {
     const post = await this.db.post.findUnique({
       where: { id },
       include: {
@@ -159,18 +227,21 @@ export class PostsService {
           select: {
             files: true,
             likes: true,
+            comments: { where: { deleted_at: null } },
           },
         },
       },
-      // omit: {
-      //   embeddings: true,
-      // },
     });
 
     if (!post) {
       throw new NotFoundException({
         message: 'Post not found',
       });
+    }
+
+    const allowed = await this.canViewPost(post, viewerId);
+    if (!allowed) {
+      throw new ForbiddenException({ message: 'You cannot view this post' });
     }
 
     return {
@@ -209,13 +280,14 @@ export class PostsService {
     const post_ = await this.db.post.create({
       data: {
         content: post.content,
+        visibility: post.visibility,
         user: {
           connect: {
             id: user.id,
           },
         },
         files: {
-          connect: post.files.map((file) => ({ id: file })),
+          connect: (post.files || []).map((file) => ({ id: file })),
         },
       },
       select: {
@@ -230,15 +302,7 @@ export class PostsService {
   }
 
   async likePost({ postId, userId }: { postId: string; userId: string }) {
-    const post = await this.db.post.findUnique({
-      where: { id: postId },
-    });
-
-    if (!post) {
-      throw new NotFoundException({
-        message: 'Post not found',
-      });
-    }
+    await this.assertCanViewPost(postId, userId);
 
     await this.db.post.update({
       where: { id: postId },
@@ -255,17 +319,8 @@ export class PostsService {
   }
 
   async unlikePost({ postId, userId }: { postId: string; userId: string }) {
-    const post = await this.db.post.findUnique({
-      where: {
-        id: postId,
-      },
-    });
+    await this.assertCanViewPost(postId, userId);
 
-    if (!post) {
-      throw new NotFoundException({
-        message: 'Post not found',
-      });
-    }
     await this.db.post.update({
       where: { id: postId },
       data: {
@@ -280,7 +335,8 @@ export class PostsService {
     };
   }
 
-  async getPostLikes(postId: string, query: PaginationParams) {
+  async getPostLikes(postId: string, query: PaginationParams, viewerId: string) {
+    await this.assertCanViewPost(postId, viewerId);
     const { skip, limit } = this.paginationUtils.getPagination(query);
 
     const allLikes = await this.db.post.findUnique({
@@ -334,185 +390,183 @@ export class PostsService {
     };
   }
 
-  // NOT A FEATURE YET
-  // async likeComment({
-  //   commentId,
-  //   userId,
-  // }: {
-  //   commentId: string;
-  //   userId: string;
-  // }) {
-  //   const comment = await this.db.comment.findUnique({
-  //     where: { id: commentId },
-  //   });
+  async getPostComments(
+    postId: string,
+    viewerId: string,
+    query: PaginationParams & { order?: 'asc' | 'desc' },
+  ) {
+    await this.assertCanViewPost(postId, viewerId);
+    const { skip, limit } = this.paginationUtils.getPagination(query);
+    const order = query.order === 'desc' ? 'desc' : 'asc';
 
-  //   if (!comment) {
-  //     throw new NotFoundException({
-  //       message: 'Comment not found',
-  //     });
-  //   }
+    const where: Prisma.commentWhereInput = {
+      postId,
+      deleted_at: null,
+      parentId: null,
+    };
 
-  //   await this.db.comment.update({
-  //     where: { id: commentId },
-  //     data: {
-  //       likes: { connect: { id: userId } },
-  //     },
-  //   });
+    const totalItems = await this.db.comment.count({ where });
+    const comments = await this.db.comment.findMany({
+      where,
+      skip,
+      take: Math.min(limit, 50),
+      orderBy: { created_at: order },
+      include: {
+        user: { select: commentUserSelect },
+      },
+    });
 
-  //   return {
-  //     message: 'Comment liked successfully',
-  //   };
-  // }
+    return {
+      data: comments.map((c) => ({
+        id: c.id,
+        postId: c.postId,
+        content: c.content,
+        userId: c.userId,
+        parentId: c.parentId,
+        created_at: c.created_at,
+        updated_at: c.updated_at,
+        user: c.user,
+      })),
+      meta: this.paginationUtils.getMeta({
+        totalItems,
+        page: query.page,
+        limit: Math.min(Number(query.limit) || 20, 50),
+      }),
+    };
+  }
 
-  // async unlikeComment({
-  //   commentId,
-  //   userId,
-  // }: {
-  //   commentId: string;
-  //   userId: string;
-  // }) {
-  //   await this.db.comment.update({
-  //     where: { id: commentId },
-  //     data: {
-  //       likes: { disconnect: { id: userId } },
-  //     },
-  //   });
+  async createComment({
+    postId,
+    userId,
+    body,
+    username,
+  }: {
+    postId: string;
+    userId: string;
+    body: createCommentDto;
+    username: string;
+  }) {
+    const content = body.content?.trim();
+    if (!content) {
+      throw new BadRequestException({ message: 'Content is required' });
+    }
+    if (content.length > 2000) {
+      throw new BadRequestException({
+        message: 'Content must be 2000 characters or less',
+      });
+    }
 
-  //   return {
-  //     message: 'Comment unliked successfully',
-  //   };
-  // }
+    const post = await this.assertCanViewPost(postId, userId);
 
-  // async getCommentLikes(commentId: string, query: PaginationParams) {
-  //   const { skip, limit } = this.paginationUtils.getPagination(query);
+    if (body.parentId) {
+      const parent = await this.db.comment.findFirst({
+        where: {
+          id: body.parentId,
+          postId,
+          deleted_at: null,
+        },
+      });
+      if (!parent) {
+        throw new BadRequestException({
+          message: 'Parent comment not found on this post',
+        });
+      }
+      if (parent.parentId) {
+        throw new BadRequestException({
+          message: 'Only one level of replies is allowed',
+        });
+      }
+    }
 
-  //   const allLikes = await this.db.comment.findUnique({
-  //     where: { id: commentId },
-  //     select: {
-  //       _count: {
-  //         select: {
-  //           likes: true,
-  //         },
-  //       },
-  //     },
-  //   });
+    const comment = await this.db.comment.create({
+      data: {
+        content,
+        postId,
+        userId,
+        parentId: body.parentId || null,
+      },
+      include: {
+        user: { select: commentUserSelect },
+      },
+    });
 
-  //   const likes = await this.db.comment.findUnique({
-  //     where: { id: commentId },
-  //     include: {
-  //       likes: {
-  //         skip,
-  //         take: limit,
-  //       },
-  //     },
-  //   });
+    if (post.userId !== userId) {
+      this.notificationService
+        .sendNotification({
+          title: 'New comment',
+          message: `@${username} commented on your post`,
+          type: 'comment',
+          userId: post.userId,
+          metadata: {
+            postId,
+            commentId: comment.id,
+            actorUserId: userId,
+          },
+        })
+        .catch(() => undefined);
+    }
 
-  //   return {
-  //     data: likes?.likes || [],
-  //     meta: this.paginationUtils.getMeta({
-  //       totalItems: allLikes?._count?.likes || 0,
-  //       page: query.page,
-  //       limit: query.limit,
-  //     }),
-  //   };
-  // }
+    return {
+      message: 'Comment added',
+      data: {
+        id: comment.id,
+        postId: comment.postId,
+        content: comment.content,
+        userId: comment.userId,
+        parentId: comment.parentId,
+        created_at: comment.created_at,
+        updated_at: comment.updated_at,
+        user: comment.user,
+      },
+    };
+  }
 
-  // async getPostComments(postId: string, query: PaginationParams) {
-  //   const { skip, limit } = this.paginationUtils.getPagination(query);
+  async deleteComment({
+    postId,
+    commentId,
+    userId,
+  }: {
+    postId: string;
+    commentId: string;
+    userId: string;
+  }) {
+    const post = await this.db.post.findUnique({
+      where: { id: postId },
+      select: { id: true, userId: true },
+    });
+    if (!post) {
+      throw new NotFoundException({ message: 'Post not found' });
+    }
 
-  //   const allComments = await this.db.post.findUnique({
-  //     where: { id: postId },
-  //     select: {
-  //       _count: {
-  //         select: {
-  //           comments: true,
-  //         },
-  //       },
-  //     },
-  //   });
+    const comment = await this.db.comment.findFirst({
+      where: {
+        id: commentId,
+        postId,
+        deleted_at: null,
+      },
+    });
+    if (!comment) {
+      throw new NotFoundException({ message: 'Comment not found' });
+    }
 
-  //   const comments = await this.db.post.findUnique({
-  //     where: { id: postId },
-  //     include: {
-  //       comments: {
-  //         skip,
-  //         take: limit,
-  //       },
-  //     },
-  //   });
+    const isCommentAuthor = comment.userId === userId;
+    const isPostAuthor = post.userId === userId;
+    if (!isCommentAuthor && !isPostAuthor) {
+      throw new ForbiddenException({
+        message: 'You cannot delete this comment',
+      });
+    }
 
-  //   return {
-  //     data: comments?.comments || [],
-  //     meta: this.paginationUtils.getMeta({
-  //       totalItems: allComments?._count?.comments || 0,
-  //       page: query.page,
-  //       limit: query.limit,
-  //     }),
-  //   };
-  // }
+    await this.db.comment.update({
+      where: { id: commentId },
+      data: {
+        deleted_at: new Date(),
+        content: '',
+      },
+    });
 
-  // async createComment({
-  //   postId,
-  //   userId,
-  //   content,
-  // }: {
-  //   postId: string;
-  //   userId: string;
-  //   content: string;
-  // }) {
-  //   const post = await this.db.post.findUnique({
-  //     where: { id: postId },
-  //   });
-
-  //   if (!post) {
-  //     throw new NotFoundException({
-  //       message: 'Post not found',
-  //     });
-  //   }
-
-  //   const comment = await this.db.comment.create({
-  //     data: {
-  //       content,
-  //       user: {
-  //         connect: { id: userId },
-  //       },
-  //       post: {
-  //         connect: { id: postId },
-  //       },
-  //     },
-  //   });
-
-  //   return {
-  //     message: 'Comment created successfully',
-  //     data: comment,
-  //   };
-  // }
-
-  // async deleteComment({ id, userId }: { id: string; userId: string }) {
-  //   const comment = await this.db.comment.findUnique({
-  //     where: { id, userId },
-  //   });
-
-  //   if (!comment) {
-  //     throw new NotFoundException({
-  //       message: 'Comment not found',
-  //     });
-  //   }
-
-  //   await this.db.comment.delete({
-  //     where: { id, userId },
-  //   });
-
-  //   return {
-  //     message: 'Comment deleted successfully',
-  //   };
-  // }
-
-  //   async updatePost(id: string, post: PostDto) {
-  //     const updatedPost = await this.db.post.update({
-  //       where: { id },
-  //       data: post,
-  //     });
-  //     return updatedPost;
-  //   }
+    return {
+      message: 'Comment deleted',
+    };
+  }
 }

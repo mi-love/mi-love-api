@@ -67,6 +67,7 @@ enum notification_type {
   security
   system
   social
+  comment
 }
 
 enum user_account_status {
@@ -184,6 +185,7 @@ model user {
   likes          post[]          @relation("post_likes")
   status         status[]
   reaction       reaction[]
+  message_reactions message_reaction[]
   liked_comments comment[]       @relation("liked_comments")
   fileId         String?
   blocked        blocked_users[] @relation("user")
@@ -211,11 +213,12 @@ model user {
 }
 
 model checkout_session {
-  id        String   @id @default(cuid())
-  amount    Float
-  createdAt DateTime @default(now())
-  userId    String
-  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String   @id @default(cuid())
+  amount      Float
+  callbackUrl String?
+  createdAt   DateTime @default(now())
+  userId      String
+  user        user     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("checkout_sessions")
 }
@@ -271,18 +274,24 @@ model status {
 }
 
 model comment {
-  id      String  @id @default(cuid())
-  content String
-  likes   user[]  @relation("liked_comments")
-  user    user?   @relation("comment_user", fields: [userId], references: [id])
-  userId  String?
-
-  post   post?   @relation(fields: [postId], references: [id])
-  postId String?
+  id         String    @id @default(cuid())
+  content    String    @db.Text
+  likes      user[]    @relation("liked_comments")
+  user       user?     @relation("comment_user", fields: [userId], references: [id])
+  userId     String?
+  post       post?     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId     String?
+  parentId   String?
+  parent     comment?  @relation("comment_replies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies    comment[] @relation("comment_replies")
+  deleted_at DateTime?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
+  @@index([postId, created_at])
+  @@index([userId])
+  @@index([parentId])
   @@map("comments")
 }
 
@@ -594,12 +603,34 @@ model message {
   user   user?   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String?
 
+  replyToMessageId String?
+  replyTo          message?  @relation("message_replies", fields: [replyToMessageId], references: [id], onDelete: SetNull)
+  replies          message[] @relation("message_replies")
+  reactions        message_reaction[]
+
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
   chat       chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
   chatId     String
 
+  @@index([chatId, created_at])
+  @@index([replyToMessageId])
   @@map("messages")
+}
+
+model message_reaction {
+  id         String   @id @default(cuid())
+  emoji      String
+  messageId  String
+  message    message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId     String
+  user       user     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@map("message_reactions")
 }
 
 model panic_actions {
@@ -615,13 +646,14 @@ model panic_actions {
 }
 
 model notification {
-  id      String            @id @default(cuid())
-  title   String
-  body    String?
-  type    notification_type
-  is_read Boolean           @default(false)
-  user    user              @relation(fields: [userId], references: [id])
-  userId  String
+  id       String            @id @default(cuid())
+  title    String
+  body     String?
+  type     notification_type
+  is_read  Boolean           @default(false)
+  metadata Json?
+  user     user              @relation(fields: [userId], references: [id])
+  userId   String
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt

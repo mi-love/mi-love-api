@@ -6,14 +6,16 @@ import {
   Get,
   Query,
   Param,
+  Delete,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ChatGateway } from './chat.gateway';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { User } from '@/common/decorator/user.decorator';
 import { UserWithoutPassword } from '@/common/types/db';
-import { SendMessageDto } from './chat.dto';
-import { PaginationUtils } from '@/common/services/pagination.service';
+import { MessageReactionDto, SendMessageDto } from './chat.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('chats')
@@ -21,12 +23,60 @@ export class ChatController {
   constructor(
     private readonly chatGateway: ChatGateway,
     private readonly chatService: ChatService,
-    private readonly paginationUtils: PaginationUtils,
   ) {}
 
   @Post('send-message')
-  sendMessage(@User() user: UserWithoutPassword, @Body() body: SendMessageDto) {
-    return this.chatService.sendMessage(user.id, body);
+  @HttpCode(HttpStatus.CREATED)
+  async sendMessage(
+    @User() user: UserWithoutPassword,
+    @Body() body: SendMessageDto,
+  ) {
+    const result = await this.chatService.sendMessage(user.id, body);
+    if (result.recipientId) {
+      this.chatGateway.emitPrivateMessage(
+        user.id,
+        result.recipientId,
+        result.socketPayload,
+      );
+    }
+    return { data: result.data };
+  }
+
+  @Post('messages/:messageId/reactions')
+  async addReaction(
+    @User() user: UserWithoutPassword,
+    @Param('messageId') messageId: string,
+    @Body() body: MessageReactionDto,
+  ) {
+    const result = await this.chatService.addOrUpdateReaction(
+      user.id,
+      messageId,
+      body.emoji,
+    );
+    this.chatGateway.emitReactionUpdated({
+      chatId: result.chatId,
+      messageId,
+      reactions: result.data.reactions,
+      actorUserId: user.id,
+      participantUserIds: result.participantUserIds,
+    });
+    return { data: result.data };
+  }
+
+  @Delete('messages/:messageId/reactions')
+  async removeReaction(
+    @User() user: UserWithoutPassword,
+    @Param('messageId') messageId: string,
+  ) {
+    const result = await this.chatService.removeReaction(user.id, messageId);
+    this.chatGateway.emitReactionUpdated({
+      chatId: result.chatId,
+      messageId,
+      reactions: result.data.reactions,
+      actorUserId: user.id,
+      participantUserIds: result.participantUserIds,
+    });
+    return { data: result.data };
   }
 
   @Get()

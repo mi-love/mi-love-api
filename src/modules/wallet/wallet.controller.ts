@@ -70,21 +70,15 @@ export class WalletController {
     );
     if (typeof redirectUrl !== 'string' || !redirectUrl.startsWith('http')) {
       throw new BadRequestException({
-        message: redirectUrl?.message || 'Invalid payment redirect URL',
+        message: 'Invalid payment redirect URL',
       });
     }
     res.redirect(redirectUrl);
   }
 
   @Get('/callback')
-  walletCallback(@Query() query: any, @Res() res: Response) {
-    const { tx_ref, status, transaction_id, reference } = query;
-    const redirectUrl = this.walletService.walletCallback(
-      tx_ref,
-      status,
-      transaction_id,
-      reference,
-    );
+  async walletCallback(@Query() query: any, @Res() res: Response) {
+    const redirectUrl = await this.walletService.walletCallback(query);
     res.redirect(redirectUrl);
   }
 
@@ -110,6 +104,16 @@ export class WalletController {
     @User() user: UserWithoutPassword,
   ) {
     return this.walletService.getTransactions(user, query);
+  }
+
+  /** Lookup by payment reference (tx ref / provider_ref). Must be before :id. */
+  @UseGuards(JwtAuthGuard)
+  @Get('/transactions/reference/:reference')
+  getTransactionByReference(
+    @Param('reference') reference: string,
+    @User() user: UserWithoutPassword,
+  ) {
+    return this.walletService.getTransactionByReference(reference, user);
   }
 
   @UseGuards(JwtAuthGuard)

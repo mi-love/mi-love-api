@@ -1,11 +1,12 @@
-import {
-  PaginationParams,
-  PaginationUtils,
-} from '@/common/services/pagination.service';
 import { Injectable } from '@nestjs/common';
 import { SendNotificationDto } from './notification.dto';
 import { Expo } from 'expo-server-sdk';
 import { DbService } from '@/database/database.service';
+import { Prisma } from '@prisma/client';
+import {
+  PaginationParams,
+  PaginationUtils,
+} from '@/common/services/pagination.service';
 
 @Injectable()
 export class NotificationService {
@@ -67,6 +68,7 @@ export class NotificationService {
         body: data.message,
         type: data.type,
         userId,
+        metadata: (data.metadata as Prisma.InputJsonValue) ?? undefined,
       },
     });
 
