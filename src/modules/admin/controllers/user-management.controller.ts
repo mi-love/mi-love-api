@@ -30,6 +30,10 @@ import {
   Disable2faDto,
   SendAccountReactivationNotificationDto,
 } from '../dtos/user-management.dto';
+import {
+  FlagUserDto,
+  ListAdminLogsQueryDto,
+} from '../dtos/content-gifts.dto';
 import { admin_role } from '@prisma/client';
 
 @Controller('admin/users')
@@ -186,6 +190,31 @@ export class AdminUserManagementController {
     @User() user: any,
   ) {
     return this.userService.sendAccountReactivationNotification(userId, data, user.id);
+  }
+
+  @Patch(':id/flag')
+  async flagUser(
+    @Param('id') userId: string,
+    @Body() data: FlagUserDto,
+    @User() user: any,
+  ) {
+    return this.userService.flagUser(userId, data, user.id);
+  }
+
+  @Patch(':id/unflag')
+  async unflagUser(@Param('id') userId: string, @User() user: any) {
+    return this.userService.unflagUser(userId, user.id);
+  }
+}
+
+@Controller('admin/audit-logs')
+@UseGuards(JwtAuthGuard, AdminRoleGuard)
+export class AdminAuditLogsController {
+  constructor(private userService: AdminUserManagementService) {}
+
+  @Get()
+  async listAuditLogs(@Query() query: ListAdminLogsQueryDto, @User() user: any) {
+    return this.userService.listAuditLogs(query, user.id);
   }
 }
 

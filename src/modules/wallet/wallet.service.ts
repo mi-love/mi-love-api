@@ -105,6 +105,19 @@ export class WalletService {
 
   async sendGift(sendGiftBody: sendGiftDto, user: UserWithoutPassword) {
     const { giftId, receiverId } = sendGiftBody;
+
+    if (!giftId || !receiverId) {
+      throw new BadGatewayException({
+        message: 'giftId and receiverId are required',
+      });
+    }
+
+    if (receiverId === user.id) {
+      throw new BadGatewayException({
+        message: 'You cannot send a gift to yourself',
+      });
+    }
+
     const gift = await this.db.gift.findUnique({
       where: {
         id: giftId,
@@ -117,9 +130,34 @@ export class WalletService {
       });
     }
 
+    // Always load sender from DB — JWT user may omit walletId
+    const sender = await this.db.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        username: true,
+        walletId: true,
+      },
+    });
+
+    if (!sender?.walletId) {
+      throw new BadGatewayException({
+        message: 'Sender wallet not found',
+      });
+    }
+
     const receiver = await this.db.user.findUnique({
       where: {
         id: receiverId,
+      },
+      select: {
+        id: true,
+        first_name: true,
+        last_name: true,
+        username: true,
+        walletId: true,
       },
     });
 
@@ -129,9 +167,15 @@ export class WalletService {
       });
     }
 
+    if (!receiver.walletId) {
+      throw new BadGatewayException({
+        message: 'Receiver wallet not found',
+      });
+    }
+
     const wallet = await this.db.wallet.findUnique({
       where: {
-        id: user.walletId,
+        id: sender.walletId,
       },
     });
 
@@ -144,7 +188,7 @@ export class WalletService {
     await this.db.$transaction(async (prisma) => {
       await prisma.wallet.update({
         where: {
-          id: user.walletId,
+          id: sender.walletId,
         },
         data: {
           balance: {
@@ -173,7 +217,7 @@ export class WalletService {
           description: `Gift sent: ${gift.name} to ${receiver.first_name} ${receiver.last_name}`,
           user: {
             connect: {
-              id: user.id,
+              id: sender.id,
             },
           },
         },
@@ -185,7 +229,7 @@ export class WalletService {
           type: 'credit',
           currency: 'USD',
           status: 'success',
-          description: `Gift received: ${gift.name} from ${user.first_name} ${user.last_name}`,
+          description: `Gift received: ${gift.name} from ${sender.first_name} ${sender.last_name}`,
           user: {
             connect: {
               id: receiver.id,
@@ -799,9 +843,20 @@ export class WalletService {
   async deductCoins(deductDto: DeductDto, user: UserWithoutPassword) {
     const { amount, description } = deductDto;
 
+    const sender = await this.db.user.findUnique({
+      where: { id: user.id },
+      select: { id: true, walletId: true },
+    });
+
+    if (!sender?.walletId) {
+      throw new BadGatewayException({
+        message: 'Wallet not found',
+      });
+    }
+
     const wallet = await this.db.wallet.findUnique({
       where: {
-        id: user.walletId,
+        id: sender.walletId,
       },
     });
 
@@ -814,7 +869,7 @@ export class WalletService {
     await this.db.$transaction(async (prisma) => {
       await prisma.wallet.update({
         where: {
-          id: user.walletId,
+          id: sender.walletId,
         },
         data: {
           balance: {
@@ -832,7 +887,7 @@ export class WalletService {
           description,
           user: {
             connect: {
-              id: user.id,
+              id: sender.id,
             },
           },
         },

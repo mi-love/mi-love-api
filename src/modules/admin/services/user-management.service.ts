@@ -1015,4 +1015,110 @@ export class AdminUserManagementService {
       bannedAt: user.banned_at,
     };
   }
+
+  async flagUser(
+    userId: string,
+    data: { reason?: string },
+    adminId: string,
+  ) {
+    const user = await this.db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    await this.db.user.update({
+      where: { id: userId },
+      data: { is_flagged: true },
+    });
+
+    await this.db.admin_action_log.create({
+      data: {
+        adminId,
+        action: 'FLAG_USER',
+        resource: 'user',
+        resource_id: userId,
+        metadata: data as any,
+      },
+    });
+    this.logger.logAdminAction(adminId, 'FLAG_USER', 'user', userId, data);
+
+    return { message: 'User flagged' };
+  }
+
+  async unflagUser(userId: string, adminId: string) {
+    const user = await this.db.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException(`User ${userId} not found`);
+    }
+
+    await this.db.user.update({
+      where: { id: userId },
+      data: { is_flagged: false },
+    });
+
+    await this.db.admin_action_log.create({
+      data: {
+        adminId,
+        action: 'UNFLAG_USER',
+        resource: 'user',
+        resource_id: userId,
+      },
+    });
+    this.logger.logAdminAction(adminId, 'UNFLAG_USER', 'user', userId);
+
+    return { message: 'User unflagged' };
+  }
+
+  async listAuditLogs(
+    query: {
+      page?: number;
+      limit?: number;
+      adminId?: string;
+      resource?: string;
+      action?: string;
+    },
+    _viewerAdminId: string,
+  ) {
+    const page = query.page || 1;
+    const limit = query.limit || 50;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (query.adminId) where.adminId = query.adminId;
+    if (query.resource) where.resource = query.resource;
+    if (query.action) where.action = query.action;
+
+    const [logs, total] = await Promise.all([
+      this.db.admin_action_log.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        include: {
+          admin: {
+            select: {
+              id: true,
+              email: true,
+              username: true,
+              first_name: true,
+              last_name: true,
+            },
+          },
+        },
+      }),
+      this.db.admin_action_log.count({ where }),
+    ]);
+
+    return {
+      data: logs,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+        hasPrevPage: page > 1,
+      },
+    };
+  }
 }

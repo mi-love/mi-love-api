@@ -57,6 +57,8 @@ export class JwtAuthGuard implements CanActivate {
           first_name: true,
           last_name: true,
           admin_role: true,
+          walletId: true,
+          is_admin: true,
         },
       });
     } catch {

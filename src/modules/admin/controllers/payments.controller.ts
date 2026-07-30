@@ -32,14 +32,14 @@ export class AdminTransactionsController {
     return this.paymentsService.listTransactions(query, user.id);
   }
 
-  @Get(':id')
-  async getTransactionDetails(@Param('id') transactionId: string, @User() user: any) {
-    return this.paymentsService.getTransactionDetails(transactionId, user.id);
-  }
-
   @Get('duplicates')
   async findDuplicateTransactions(@User() user: any) {
     return this.paymentsService.findDuplicateTransactions(user.id);
+  }
+
+  @Get(':id')
+  async getTransactionDetails(@Param('id') transactionId: string, @User() user: any) {
+    return this.paymentsService.getTransactionDetails(transactionId, user.id);
   }
 }
 
